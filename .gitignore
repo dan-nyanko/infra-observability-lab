@@ -1,0 +1,11 @@
+# Terraform state and config
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+terraform.tfvars
+
+# Editor and OS artifacts
+.DS_Store
+.vscode/
+.idea/
