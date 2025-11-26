@@ -1,6 +1,6 @@
 ## Infra Observability Lab
 
-A hands-on DevOps lab exploring infrastructure provisioning, observability tooling, incident simulation, and CI/CD workflows—built on GCP for learning and experimentation.
+A hands-on DevOps lab exploring infrastructure provisioning, observability tooling, incident simulation, and CI/CD workflows — built on GCP for learning and experimentation.
 
 ---
 
@@ -161,15 +161,7 @@ To allow Terraform to authenticate with Google Cloud during CI/CD runs, you’ll
 •  Name the secret: GCP_TF_KEY.
 •  Paste the entire JSON key file contents into the value field.  
 
-> On macOS you can copy the file contents with pbcopy < ~/.gcp/key.json and paste directly.)
-
-Use it locally:
-
-```bash
-export GOOGLE_APPLICATION_CREDENTIALS="path/to/key.json"
-terraform init
-terraform apply
-```
+> On macOS you can copy the file contents with pbcopy < ~/.gcp/key.json and paste directly.
 
 ---
 
@@ -233,9 +225,34 @@ kubectl get nodes
 kubectl get pods --all-namespaces
 ```
 
+#### Workflow Hygiene
+- Always run `plan` before `apply` to review changes.  
+- Use GitHub Actions workflows to automate `plan` (PR) and `apply` (merge).  
+- Document incidents and recovery steps in the README for reproducibility.
+
 ---
 
-#### Common Setup Errors
+### Post‑Apply Cluster Setup
+
+After provisioning the GKE cluster with Terraform, you may see warnings in the Cloud Console:
+
+#### ⚠️ Verify Webhook Endpoints
+- **Meaning**: Admission webhooks (used for policy enforcement or mutating workloads) must be reachable and healthy.  
+- **Action**:  
+  - If you haven’t deployed custom webhooks, you can ignore this for now.  
+  - If you add webhooks later, confirm they’re accessible from the cluster and don’t block pod scheduling (`kubectl describe pod` will show webhook errors).
+
+
+#### ⚠️ Set Maintenance Window
+- **Meaning**: GKE automatically upgrades control plane and nodes. By default, upgrades can occur at any time.  
+- **Action**:  
+  - In the Cloud Console, go to **Cluster details → Maintenance window**.  
+  - Set a preferred time (e.g., 2–4 AM local) when upgrades are least disruptive.  
+  - This is optional in a lab, but demonstrates proactive ops hygiene.
+
+---
+
+#### ⚠️ Common Setup Errors
 - **403: Kubernetes Engine API not enabled**  
   Enable it before running `apply`:
   ```bash
@@ -248,49 +265,23 @@ kubectl get pods --all-namespaces
 
 ---
 
-#### Workflow Hygiene
-- Always run `plan` before `apply` to review changes.  
-- Use GitHub Actions workflows to automate `plan` (PR) and `apply` (merge).  
-- Document incidents and recovery steps in the README for reproducibility.
+### Prometheus
 
----
-
-### Setup Instructions
-
-#### 1. Clone the repo
-
-```bash
-git clone git@github.com:dan-nyanko/infra-observability-lab.git
-cd infra-observability-lab
-```
-
-#### 2. Configure `terraform.tfvars`
-
-```hcl
-project_id   = "your-gcp-project-id"
-region       = "us-central1"
-cluster_name = "observability-lab"
-```
-
-Place this file in the `terraform/` directory.
-
-#### 3. Provision GKE Autopilot
-
-```bash
-cd terraform
-terraform init
-terraform plan
-terraform apply
-```
-
-#### 4. Deploy Prometheus + Grafana
+TODO
 
 ```bash
 kubectl apply -f monitoring/prometheus.yml
+```
+
+### Grafana
+
+TODO
+
+```bash
 kubectl apply -f monitoring/grafana-dashboard.json
 ```
 
-#### 5. Run Incident Simulation
+### Run Incident Simulation
 
 ```bash
 bash incidents/simulate_cpu_spike.sh
