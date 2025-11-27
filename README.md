@@ -24,14 +24,15 @@ This lab demonstrates key platform engineering principles using Google Cloud Pla
 
 ### 🔧 Components
 
-| Module | Description |
-|--------|-------------|
-| `terraform/` | Provisions GKE Autopilot cluster and supporting resources |
-| `monitoring/` | Prometheus config, Grafana dashboard, alerting rules |
-| `incidents/` | Bash/Python scripts to simulate CPU spikes, disk fill, etc. |
-| `.github/workflows/` | CI/CD pipeline with linting, testing, and deploy stages |
-| `architecture.png` | Visual diagram of system flow |
-| `README.md` | Documentation and reliability framing |
+| Module                | Purpose                                                                 |
+|-----------------------|-------------------------------------------------------------------------|
+| `terraform/`          | Infrastructure-as-code to provision the GKE Autopilot cluster and base networking |
+| `k8s/`                | Kubernetes manifests for workloads and observability stack (Prometheus, Grafana, infra-demo-api) |
+| `incidents/`          | Simulation scripts (Bash/Python) to trigger stress scenarios: CPU spikes, memory leaks, disk fill |
+| `.github/workflows/`  | GitHub Actions pipelines for linting, testing, image build/push, and cluster deploy |
+| `dashboards/`         | Grafana dashboard JSON templates for visualizing metrics and incident impact |
+| `architecture.png`    | System diagram showing cluster flow, observability, and CI/CD integration |
+| `README.md`           | Entry point documentation, reliability framing, and demo instructions |
 
 ---
 
@@ -265,21 +266,217 @@ After provisioning the GKE cluster with Terraform, you may see warnings in the C
 
 ---
 
-### Prometheus
+### 📦 infra-demo-api
 
-TODO
+`infra-demo-api` is a lightweight demo service used to illustrate blue/green deployments, observability, and incident simulation. It exposes a simple HTTP endpoint that responds with a version string, making it easy to visualize traffic shifts in Prometheus and Grafana.
+
+#### 🔍 Features
+- Minimal Flask/Express-style API returning `Hello from demo-api <VERSION>!`
+- Configurable via environment variable `VERSION` (e.g., `v1`, `v2`)
+- Exposes `/metrics` endpoint for Prometheus scraping
+- Designed for teaching reproducible Kubernetes workflows
+
+#### 🚀 Usage (Docker)
+You don’t need to build the image yourself — just pull from Docker Hub:
 
 ```bash
-kubectl apply -f monitoring/prometheus.yml
+docker run -p 5000:5000 \
+  -e VERSION=v1 \
+  dannyanko/infra-demo-api:latest
 ```
+
+Visit [http://localhost:5000](http://localhost:5000) → returns:
+```
+Hello from demo-api v1!
+```
+
+#### 📄 Kubernetes Deployment
+Reference the public image in your manifests:
+
+```yaml
+containers:
+- name: infra-demo-api
+  image: dannyanko/infra-demo-api:latest
+  ports:
+  - containerPort: 5000
+  env:
+  - name: VERSION
+    value: "blue"   # or "green"
+```
+
+#### 🧭 Best Practices
+- **Never rely on `:latest`** in production. It’s mutable and prone to caching issues.
+- **Always use versioned tags** (`:v1`, `:v2`, etc.) for reproducibility.
+- Document image versions in your repo so learners know which tag to deploy.
+- CI/CD pipelines should automatically bump tags and roll out new versions.
+
+---
+
+### Prometheus
+
+Here’s a safe **Prometheus ConfigMap template** that matches the same `envsubst` style we used for Grafana secrets. This way, you can keep scrape targets flexible and reproducible without hard‑coding cluster service names:
+
+---
+
+#### 📄 `k8s/prometheus/prometheus-config.yaml`
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: observability
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'infra-demo-api'
+        static_configs:
+          - targets: ["${PROMETHEUS_TARGET}"]
+```
+---
+
+Prometheus requires scrape targets to be defined. To keep the repo safe and flexible, we use a template ConfigMap (`prometheus-config.yaml`) with an environment variable placeholder.
+
+1. Export your target service:
+   ```bash
+   export PROMETHEUS_TARGET=infra-demo-api.observability.svc.cluster.local:80
+   ```
+
+2. Apply the config using `envsubst`:
+   ```bash
+   envsubst < k8s/prometheus/prometheus-config.yaml | kubectl apply -f -
+   ```
+
+3. Deploy Prometheus:
+   ```bash
+   kubectl apply -f k8s/prometheus/prometheus-deployment.yaml
+   kubectl apply -f k8s/prometheus/prometheus-service.yaml
+   ```
+
+Prometheus will now scrape metrics from the `infra-demo-api` service.
 
 ### Grafana
 
-TODO
-
-```bash
-kubectl apply -f monitoring/grafana-dashboard.json
+#### 📄 `k8s/grafana/grafana-secret.yaml`
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-admin-secret
+  namespace: observability
+type: Opaque
+stringData:
+  GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
 ```
+
+- Note: `${GRAFANA_PASSWORD}` is a placeholder.  
+- You’ll set the environment variable in your shell before applying.
+
+#### 🔐 Grafana Admin Password
+
+Grafana requires an admin password. For security, we don’t commit real secrets into Git.
+Instead, we use a template Secret manifest (`grafana-secret.yaml`) with a placeholder.
+
+1. Export your password as an environment variable:
+   ```bash
+   export GRAFANA_PASSWORD=supersecure
+   ```
+
+2. Apply the secret using `envsubst`:
+   ```bash
+   envsubst < k8s/grafana/grafana-secret.yaml | kubectl apply -f -
+   ```
+
+3. Deploy Grafana:
+   ```bash
+   kubectl apply -f k8s/grafana/grafana-deployment.yaml
+   kubectl apply -f k8s/grafana/grafana-service.yaml
+   ```
+
+4. Log in:
+   - URL: `http://<EXTERNAL-IP>:3000`
+   - User: `admin`
+   - Password: the value you set in `$GRAFANA_PASSWORD`
+
+---
+
+#### 🧭 Why this is best practice
+- **No secrets in Git** → you only commit a template.  
+- **Reproducible** → anyone cloning the repo can follow the same workflow.  
+- **Flexible** → rotate passwords by re‑exporting `GRAFANA_PASSWORD` and re‑applying the Secret.  
+
+---
+
+Here’s a polished **README section** you can drop straight into your repo to guide learners through debugging Kubernetes secrets. It’s written in a reproducible, teaching‑artifact style that matches the rest of your observability lab:
+
+---
+
+## 🔐 Debugging Kubernetes Secrets
+
+Secrets are critical for storing credentials (like Grafana’s admin password). If they’re mis‑applied or left empty, pods may fail to start correctly or you won’t be able to log in. Here’s how to debug and fix them.
+
+### 1. Inspect the Secret
+Check if the secret exists and what keys it contains:
+```bash
+kubectl get secret grafana-admin-secret -n observability
+kubectl describe secret grafana-admin-secret -n observability
+```
+
+Decode a specific key:
+```bash
+kubectl get secret grafana-admin-secret -n observability \
+  -o jsonpath="{.data.GF_SECURITY_ADMIN_PASSWORD}" | base64 --decode
+```
+
+- If you see nothing or `${PLACEHOLDER}`, the secret wasn’t populated correctly.
+- If you see your expected password, the secret is valid.
+
+---
+
+### 2. Common Issues
+- **Empty values (0 bytes):** Usually caused by skipping `envsubst` when applying manifests with placeholders.
+- **Wrong key names:** Grafana expects `GF_SECURITY_ADMIN_PASSWORD`.
+- **Pod not restarted:** Even after fixing the secret, the Grafana pod may still be using the old value.
+
+---
+
+### 3. Fixing a Broken Secret
+Delete the bad secret:
+```bash
+kubectl delete secret grafana-admin-secret -n observability
+```
+
+Re‑create with real value:
+```bash
+kubectl create secret generic grafana-admin-secret \
+  --from-literal=GF_SECURITY_ADMIN_PASSWORD=changeme \
+  -n observability
+```
+
+Verify you have a value:
+```bash
+kubectl describe secret grafana-admin-secret -n observability
+```
+
+Restart Grafana pod so it picks up the new secret:
+```bash
+kubectl delete pod -l app=grafana -n observability
+```
+
+---
+
+### 4. Best Practices
+- Always run manifests with placeholders through `envsubst`:
+  ```bash
+  export GRAFANA_PASSWORD=changeme
+  envsubst < k8s/grafana/grafana-secret.yaml | kubectl apply -f -
+  ```
+- Document expected secret keys in your repo.
+- Verify secrets before trying to log in.
+
+---
 
 ### Run Incident Simulation
 
