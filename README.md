@@ -296,7 +296,7 @@ Reference the public image in your manifests:
 ```yaml
 containers:
 - name: infra-demo-api
-  image: dannyanko/infra-demo-api:latest
+  image: dannyanko/infra-demo-api:v1
   ports:
   - containerPort: 5000
   env:
@@ -309,6 +309,279 @@ containers:
 - **Always use versioned tags** (`:v1`, `:v2`, etc.) for reproducibility.
 - Document image versions in your repo so learners know which tag to deploy.
 - CI/CD pipelines should automatically bump tags and roll out new versions.
+
+Here’s a complete **README section in Markdown** you can drop into your repo to cover the **Blue/Green Deployment demo**. It walks learners through the Dockerfile, multi‑platform builds, pushing to Docker Hub, deploying with `kubectl`, and finally switching traffic and testing requests.
+
+---
+
+### 🔵🟢 Blue/Green Deployment Demo
+
+This section demonstrates how to build and publish the `demo-api` image, deploy two versions (`blue` and `green`) into Kubernetes, and switch traffic between them.
+
+---
+
+#### 🐳 Dockerfile
+
+The `demo-api` Dockerfile defines a simple containerized API service:
+
+```dockerfile
+FROM node:18-alpine
+
+WORKDIR /app
+COPY package*.json ./
+RUN npm install --production
+
+COPY . .
+EXPOSE 3000
+
+CMD ["npm", "start"]
+```
+
+---
+
+#### 🛠️ Building for Multiple Platforms
+
+To ensure compatibility across both `amd64` and `arm64` nodes, use Docker Buildx:
+
+```bash
+docker buildx build --platform linux/amd64,linux/arm64 \
+  -t <your-dockerhub-username>/demo-api:v1 . \
+  --push \
+  --provenance=false --sbom=false
+```
+
+- `--platform` ensures a multi‑arch manifest list is created.  
+- `-t ...:v1` tags the image with a reproducible version (`:v1`).  
+- `--push` uploads directly to Docker Hub.
+
+Verify the manifest list:
+
+```bash
+docker buildx imagetools inspect <your-dockerhub-username>/demo-api:v1
+```
+
+---
+
+#### 🚀 Deploying Blue and Green Versions
+
+Create two Deployment manifests:
+
+**`demo-api/blue.yaml`**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-api-blue
+  namespace: observability
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-api
+      version: blue
+  template:
+    metadata:
+      labels:
+        app: demo-api
+        version: blue
+        environment: development
+    spec:
+      containers:
+        - name: demo-api
+          image: <your-dockerhub-username>/demo-api:v1
+          env:
+          - name: VERSION
+            value: "blue"
+          ports:
+          - containerPort: 5000
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "400m"
+              memory: "1Gi"
+          imagePullPolicy: Always
+
+```
+
+**`demo-api/green.yaml`**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-api-green
+  namespace: observability
+  environment: development
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-api
+      version: green
+  template:
+    metadata:
+      labels:
+        app: demo-api
+        version: green
+    spec:
+      containers:
+        - name: demo-api
+          image: <your-dockerhub-username>/demo-api:v1
+        env:
+        - name: VERSION
+          value: "blue"
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "400m"
+            memory: "1Gi"
+        imagePullPolicy: Always
+```
+
+Apply both:
+
+```bash
+kubectl apply -f demo-api-blue.yaml -n observability
+kubectl apply -f demo-api-green.yaml -n observability
+```
+
+---
+
+#### 🔀 Switching Traffic
+
+Define a Service that selects either `blue` or `green` pods:
+
+**`demo-api-service.yaml`**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-api
+  namespace: observability
+  environment: development
+spec:
+  selector:
+    app: demo-api
+    version: blue   # 👈 switch here between "blue" and "green"
+  ports:
+    - port: 80
+      targetPort: 5000
+```
+
+Apply the Service:
+
+```bash
+kubectl apply -f demo-api-service.yaml -n observability
+```
+
+To switch traffic, edit the Service selector:
+
+```yaml
+selector:
+  app: demo-api
+  version: green
+```
+
+Re‑apply:
+
+```bash
+kubectl apply -f demo-api-service.yaml -n observability
+```
+
+---
+
+#### 🌐 Accessing via LoadBalancer Public IP
+
+Instead of using `kubectl port-forward`, expose the `demo-api` Service as a LoadBalancer:
+
+**`demo-api-service.yaml`**
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-api
+  namespace: observability
+spec:
+  type: LoadBalancer   # 👈 ensures a public IP is provisioned
+  selector:
+    app: demo-api
+    version: blue      # switch between "blue" and "green"
+  ports:
+    - port: 80
+      targetPort: 3000
+```
+
+Apply the Service:
+
+```bash
+kubectl apply -f demo-api-service.yaml -n observability
+```
+
+---
+
+### 🔍 Get the Public IP
+
+Run:
+
+```bash
+kubectl get svc demo-api -n observability
+```
+
+Example output:
+
+```
+NAME       TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
+demo-api   LoadBalancer   10.0.0.123     34.123.45.67    80:3000/TCP    2m
+```
+
+- The `EXTERNAL-IP` column shows the public IP assigned by your cloud provider (GKE, EKS, AKS).  
+- It may take 1–2 minutes for the IP to be provisioned.
+
+---
+
+#### 📡 Send Requests
+
+Once the external IP is available:
+
+```bash
+curl http://34.123.45.67/
+```
+
+- When the Service selector points to `version: blue`, responses come from the blue deployment.  
+- When switched to `version: green`, responses come from the green deployment.  
+
+---
+
+### ⏱️ Switching Traffic
+
+Edit the Service selector:
+
+```yaml
+selector:
+  app: demo-api
+  version: green
+```
+
+Re‑apply:
+
+```bash
+kubectl apply -f demo-api-service.yaml -n observability
+```
+
+Within seconds (once green pods are `Ready`), requests to the LoadBalancer IP will start returning green responses.
+
+---
+
+#### 🎉 Key Takeaways
+- Use **versioned image tags** (`blue`, `green`) for reproducibility.  
+- Deploy **blue and green** versions side‑by‑side.  
+- Switch traffic by updating the Service selector.  
+- Validate with `curl` requests to confirm which version is serving traffic.
 
 ---
 
@@ -409,15 +682,11 @@ Instead, we use a template Secret manifest (`grafana-secret.yaml`) with a placeh
 
 ---
 
-Here’s a polished **README section** you can drop straight into your repo to guide learners through debugging Kubernetes secrets. It’s written in a reproducible, teaching‑artifact style that matches the rest of your observability lab:
-
----
-
-## 🔐 Debugging Kubernetes Secrets
+### 🔐 Debugging Kubernetes Secrets
 
 Secrets are critical for storing credentials (like Grafana’s admin password). If they’re mis‑applied or left empty, pods may fail to start correctly or you won’t be able to log in. Here’s how to debug and fix them.
 
-### 1. Inspect the Secret
+#### 1. Inspect the Secret
 Check if the secret exists and what keys it contains:
 ```bash
 kubectl get secret grafana-admin-secret -n observability
@@ -435,14 +704,14 @@ kubectl get secret grafana-admin-secret -n observability \
 
 ---
 
-### 2. Common Issues
+#### 2. Common Issues
 - **Empty values (0 bytes):** Usually caused by skipping `envsubst` when applying manifests with placeholders.
 - **Wrong key names:** Grafana expects `GF_SECURITY_ADMIN_PASSWORD`.
 - **Pod not restarted:** Even after fixing the secret, the Grafana pod may still be using the old value.
 
 ---
 
-### 3. Fixing a Broken Secret
+#### 3. Fixing a Broken Secret
 Delete the bad secret:
 ```bash
 kubectl delete secret grafana-admin-secret -n observability
@@ -467,7 +736,7 @@ kubectl delete pod -l app=grafana -n observability
 
 ---
 
-### 4. Best Practices
+#### 4. Best Practices
 - Always run manifests with placeholders through `envsubst`:
   ```bash
   export GRAFANA_PASSWORD=changeme
@@ -475,6 +744,73 @@ kubectl delete pod -l app=grafana -n observability
   ```
 - Document expected secret keys in your repo.
 - Verify secrets before trying to log in.
+
+---
+
+### 📊 Accessing Prometheus and Grafana
+
+Prometheus and Grafana are **internal observability tools**. In this lab, we intentionally keep them private inside the cluster and require port‑forwarding to access them. This models production hygiene: observability stacks are not exposed publicly, while demo applications may be.
+
+---
+
+#### 🔍 Check Service Types
+
+Run:
+```bash
+kubectl get svc -n observability
+```
+
+Expected output:
+```
+NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
+prometheus   ClusterIP   10.0.0.123     <none>        9090/TCP   2m
+grafana      ClusterIP   10.0.0.124     <none>        3000/TCP   2m
+demo-api     LoadBalancer 10.0.0.125    34.123.45.67  80/TCP     2m
+```
+
+- **Prometheus** → `ClusterIP` (internal only)  
+- **Grafana** → `ClusterIP` (internal only)  
+- **demo-api** → `LoadBalancer` (public IP for blue/green demo)
+
+If Prometheus or Grafana show `LoadBalancer` with an external IP, edit their Service manifests to use `ClusterIP`.
+
+---
+
+#### 🔑 Port‑Forwarding Prometheus
+
+Forward port 9090 locally:
+```bash
+kubectl port-forward svc/prometheus 9090:9090 -n observability
+```
+
+Open [http://localhost:9090](http://localhost:9090) in your browser.
+
+- Go to **Status → Targets** to confirm demo‑api endpoints are `UP`.  
+- Run a simple query like `up` to verify metrics are being scraped.
+
+---
+
+#### 🔑 Port‑Forwarding Grafana
+
+Forward port 3000 locally:
+```bash
+kubectl port-forward svc/grafana 3000:3000 -n observability
+```
+
+Open [http://localhost:3000](http://localhost:3000).
+
+- Default login: `admin / admin` (unless overridden).  
+- Go to **Configuration → Data Sources** and confirm Prometheus is connected.  
+- Import a sample dashboard to visualize metrics.
+
+---
+
+#### 🧭 Best Practice
+
+- **Prometheus & Grafana**: keep internal (`ClusterIP`) and require port‑forwarding.  
+- **demo-api**: expose via `LoadBalancer` so learners can hit a public IP and see blue/green switching.  
+- This separation models real‑world hygiene: observability tools are private, demo apps are public.
+
 
 ---
 
