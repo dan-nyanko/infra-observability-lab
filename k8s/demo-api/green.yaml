@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-api-green
+  namespace: observability
+  labels:
+    app: demo-api
+    version: green
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-api
+      version: green
+  template:
+    metadata:
+      labels:
+        app: demo-api
+        version: green
+        environment: development
+    spec:
+      containers:
+      - name: demo-api
+        image: dannyanko/infra-demo-api:v1
+        env:
+        - name: VERSION
+          value: "green"
+        ports:
+        - containerPort: 5000
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "400m"
+            memory: "1Gi"
+        imagePullPolicy: Always
