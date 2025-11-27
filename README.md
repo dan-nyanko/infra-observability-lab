@@ -604,7 +604,7 @@ data:
       scrape_interval: 15s
 
     scrape_configs:
-      - job_name: 'infra-demo-api'
+      - job_name: 'demo-api'
         static_configs:
           - targets: ["${PROMETHEUS_TARGET}"]
 ```
@@ -614,7 +614,7 @@ Prometheus requires scrape targets to be defined. To keep the repo safe and flex
 
 1. Export your target service:
    ```bash
-   export PROMETHEUS_TARGET=infra-demo-api.observability.svc.cluster.local:80
+   export PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
    ```
 
 2. Apply the config using `envsubst`:
