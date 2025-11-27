@@ -1,23 +1,49 @@
 ## Infra Observability Lab
 
-A hands-on DevOps lab exploring infrastructure provisioning, observability tooling, incident simulation, and CI/CD workflows — built on GCP for learning and experimentation.
+A hands-on DevOps lab exploring infrastructure provisioning, observability tooling, incident simulation — built on GCP for learning and experimentation.
 
 ---
 
-### Project Overview
+### 📘 Project Overview
 
-This lab demonstrates key platform engineering principles using Google Cloud Platform (GCP), Terraform, Prometheus, Grafana, and GitHub Actions. It’s designed as a sandbox for exploring:
+This lab is designed as a **teaching artifact** for Kubernetes learners. It models real‑world observability, deployment hygiene, and security practices in a reproducible way. The project has evolved beyond a simple Prometheus/Grafana demo into a structured environment that emphasizes onboarding clarity and operational trade‑offs.
 
-- Infrastructure-as-code provisioning
-- Observability-first system design
-- Incident simulation and recovery workflows
-- CI/CD hygiene and automation
+---
+
+#### 🎯 Goals
+- Provide a **kubectl‑driven lab** that learners can run locally or in GKE.
+- Teach **observability fundamentals** with Prometheus and Grafana.
+- Demonstrate **blue/green deployments** using demo‑api.
+- Model **namespace discipline** (`observability` vs `default`) to avoid common pitfalls.
+- Show **security hygiene** by keeping observability tools internal and protecting public endpoints with Cloud Armor.
+
+---
+
+#### 🏗️ Architecture
+- **demo‑api**: A simple application exposed via `LoadBalancer` + Ingress for blue/green switching.
+- **Prometheus**: Internal (`ClusterIP`), accessed via port‑forwarding, scrapes demo‑api metrics.
+- **Grafana**: Internal (`ClusterIP`), accessed via port‑forwarding, visualizes Prometheus data.
+- **Cloud Armor**: Protects demo‑api ingress with rate limiting and IP rules.
+- **Namespace separation**: All components live in `observability` to reinforce best practices.
+
+---
+
+#### 🔑 Key Teaching Moments
+- **Service DNS alignment**: Prometheus scrapes `demo-api.observability.svc.cluster.local`; mismatches cause `no such host`.
+- **Port‑forwarding vs public IPs**: Observability tools stay private; demo‑api is public.
+- **Blue/green deployments**: Learners inspect Service selectors and curl responses to see which version is active.
+- **Security at the edge**: Cloud Armor policies throttle abusive traffic before it reaches pods.
+- **Troubleshooting flow**: Learners practice fixing namespace errors, DNS mismatches, and scrape failures.
+
+#### 🚀 Next Steps
+- Pivot toward **Terraform‑driven Infrastructure as Code** for reproducibility and GitOps workflows.
 
 ---
 
 ### Architecture
 
 ![Architecture Diagram](architecture.png)  
+
 *A GCP-hosted GKE Autopilot cluster runs Prometheus and Grafana. Metrics are collected from simulated workloads and exposed via exporters. Alerts trigger based on thresholds, and incident simulations validate recovery paths.*
 
 ---
