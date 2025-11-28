@@ -129,7 +129,7 @@ Authenticate and set your project:
 
 ```bash
 gcloud auth login
-gcloud config set project your-project-id
+gcloud config set project infra-observability-lab
 gcloud services enable container.googleapis.com
 ```
 
@@ -138,7 +138,7 @@ gcloud services enable container.googleapis.com
 To enable shared, auditable infrastructure state, this lab uses Terraform remote state stored in a GCS bucket.
 
 ```bash
-gsutil mb -p YOUR_PROJECT_ID -l us-central1 gs://infra-observability-tfstate/
+gsutil mb -p infra-observability-lab -l us-central1 gs://infra-observability-tfstate/
 ```
 
 Then add backend.tf in the terraform/ directory:
@@ -561,8 +561,8 @@ kubectl get svc demo-api -n observability
 Example output:
 
 ```
-NAME       TYPE           CLUSTER-IP     EXTERNAL-IP     PORT(S)        AGE
-demo-api   LoadBalancer   10.0.0.123     34.123.45.67    80:3000/TCP    2m
+NAME       TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)        AGE
+demo-api   LoadBalancer   10.0.0.123     34.x.x.x          80:3000/TCP    2m
 ```
 
 - The `EXTERNAL-IP` column shows the public IP assigned by your cloud provider (GKE, EKS, AKS).  
@@ -575,7 +575,7 @@ demo-api   LoadBalancer   10.0.0.123     34.123.45.67    80:3000/TCP    2m
 Once the external IP is available:
 
 ```bash
-curl http://34.123.45.67/
+curl http://34.x.x.x/
 ```
 
 - When the Service selector points to `version: blue`, responses come from the blue deployment.  
@@ -788,10 +788,10 @@ kubectl get svc -n observability
 
 Expected output:
 ```
-NAME         TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)    AGE
-prometheus   ClusterIP   10.0.0.123     <none>        9090/TCP   2m
-grafana      ClusterIP   10.0.0.124     <none>        3000/TCP   2m
-demo-api     LoadBalancer 10.0.0.125    34.123.45.67  80/TCP     2m
+NAME         TYPE         CLUSTER-IP     EXTERNAL-IP     PORT(S)    AGE
+prometheus   ClusterIP    10.0.0.123     <none>          9090/TCP   2m
+grafana      ClusterIP    10.0.0.124     <none>          3000/TCP   2m
+demo-api     LoadBalancer 10.0.0.125     34.x.x.x        80/TCP     2m
 ```
 
 - **Prometheus** → `ClusterIP` (internal only)  
@@ -837,6 +837,227 @@ Open [http://localhost:3000](http://localhost:3000).
 - **demo-api**: expose via `LoadBalancer` so learners can hit a public IP and see blue/green switching.  
 - This separation models real‑world hygiene: observability tools are private, demo apps are public.
 
+---
+
+### 🛡️ Security in GCP/Kubernetes: Setting up Cloud Armor Policies
+
+This section demonstrates how to protect your demo‑api service against DoS/DDoS and abusive traffic using **Google Cloud Armor**. Cloud Armor integrates with GKE Ingress to enforce security rules at the edge, before traffic reaches your cluster.
+
+---
+
+#### 1. Create a Cloud Armor Security Policy
+```bash
+gcloud compute security-policies create demo-api-policy \
+  --description="Protect demo-api ingress with rate limiting and IP rules"
+```
+
+---
+
+#### 2. Add a Rate Limiting Rule
+For example, limit each client IP to **10 requests per second** with a burst of 20:
+
+```bash
+gcloud compute security-policies rules create 100 \
+  --security-policy=demo-api-policy \
+  --expression="true" \
+  --action=rate-based-ban \
+  --rate-limit-threshold-count=10 \
+  --rate-limit-threshold-interval-sec=60 \
+  --enforce-on-key=IP \
+  --ban-duration-sec=60 \
+  --conform-action=allow \
+  --exceed-action="deny-429" \
+  --description="Rate limit: 10 RPS per IP, ban for 60s if exceeded"
+```
+
+- `--rate-limit-threshold-count=10` → max 10 requests  
+- `--rate-limit-threshold-interval-sec=60` →  seconds
+- `--enforce-on-key=IP` → enforce per client IP  
+- `--ban-duration-sec=60` → ban for 60 seconds if exceeded  
+- `--conform-action=allow` → requests under the threshold are allowed.
+- `--exceed-action="deny-429"` → requests over the threshold get HTTP 429 Too Many Requests.
+- `--action=rate-based-ban` + `--ban-duration-sec=60` → if a client repeatedly exceeds the threshold, they’re banned for 60 seconds.
+
+---
+
+#### 3. Define a BackendConfig in Kubernetes
+```yaml
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  name: demo-api-backendconfig
+  namespace: observability
+spec:
+  securityPolicy:
+    name: demo-api-policy   # 👈 must match Cloud Armor policy name
+```
+
+Apply:
+```bash
+kubectl apply -f backendconfig.yaml -n observability
+```
+
+---
+
+#### 4. Annotate the Service
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: demo-api
+  namespace: observability
+  annotations:
+    cloud.google.com/backend-config: '{"default": "demo-api-backendconfig"}'
+spec:
+  type: NodePort
+  selector:
+    app: demo-api
+  ports:
+    - port: 80
+      targetPort: 3000
+```
+
+Apply it:
+
+```bash
+kubectl apply -f demo-api/service.yaml
+```
+
+---
+
+#### 5. Create the Ingress
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-api-ingress
+  namespace: observability
+  annotations:
+    kubernetes.io/ingress.class: "gce"   # Use GCE ingress controller
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: demo-api
+            port:
+              number: 80
+```
+
+Apply it:
+
+```bash
+kubectl apply -f ingress.yaml
+```
+
+---
+
+#### 6. Verify Policy Attachment
+Get list of backend services
+
+```bash
+gcloud compute backend-services list
+```
+
+Get details of the service
+
+```bash
+gcloud compute backend-services describe ks-be<hash> \
+  --global \
+  --format="value(securityPolicy)"
+```
+
+You should see `demo-api-policy`.
+
+---
+
+#### 🎉 Key Takeaways
+- Cloud Armor policies are created in GCP and bound to GKE backends via `BackendConfig`.  
+- Rate limiting rules throttle abusive clients before traffic reaches your pods.  
+- This setup models production hygiene: observability tools stay internal, demo‑api is public but protected.
+
+---
+
+#### ✅ Verification: Ingress + Cloud Armor Flow
+
+##### Diagram
+
+```
+[ Client ] 
+     │
+     ▼
+[ Ingress IP (GCP LB Frontend) ]
+     │
+     ▼
+[ GCP HTTP(S) Load Balancer ]
+     │
+     ▼
+[ Backend Service + Cloud Armor Policy ]
+     │
+     ▼
+[ Zonal NEG → demo-api Pods (port 5000) ]
+```
+
+---
+
+##### Checklist
+
+- [x] **Ingress IP allocated**  
+  - Run `kubectl get ingress -n observability` → IP appears in `ADDRESS` column.  
+  - Example: `34.x.x.x`.
+
+- [x] **Backend service healthy**  
+  - In GCP Console → Network Services → Load Balancing → Backend services.  
+  - Endpoints show “Healthy”.
+
+- [x] **Cloud Armor policy attached**  
+  - Backend service shows `demo-api-policy` under “Security policy”.
+
+- [x] **Service port mapping correct**  
+  - Service spec: `port: 80 → targetPort: 5000`.  
+  - App listens on port 5000.
+
+- [x] **App responds with 200 OK**  
+  - `curl http://<INGRESS_IP>/` returns `Hello from demo-api blue!`.
+
+- [x] **Debug pod confirms in-cluster routing**  
+  - `kubectl exec -it curlpod -n observability -- curl http://demo-api.observability.svc.cluster.local:80/` returns 200 OK.
+
+---
+
+##### Debug pod
+
+```yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  name: curlpod
+  namespace: observability
+spec:
+  containers:
+  - name: curlpod
+    image: curlimages/curl
+    command: ["sleep", "3600"]
+    resources:
+      requests:
+        cpu: "100m"
+        memory: "128Mi"
+```
+
+Apply it:
+
+```bash
+kubectl apply -f curlpod.yaml
+```
+
+Then exec into it:
+
+```bash
+kubectl exec -it curlpod -n observability -- curl -v http://demo-api.observability.svc.cluster.local:80/
+```
 
 ---
 
