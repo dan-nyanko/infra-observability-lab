@@ -340,9 +340,9 @@ Here’s a complete **README section in Markdown** you can drop into your repo t
 
 ---
 
-### 🔵🟢 Blue/Green Deployment Demo
+### 🔵🟢🔴 Blue/Green/Red Deployment Demo
 
-This section demonstrates how to build and publish the `demo-api` image, deploy two versions (`blue` and `green`) into Kubernetes, and switch traffic between them.
+This section demonstrates how to build and publish the `demo-api` image, deploy three versions (`blue`, `green`, and `red`) into Kubernetes, and switch traffic between them. The **red** version is designed to simulate errors and latency for observability and incident response practice.
 
 ---
 
@@ -371,26 +371,26 @@ To ensure compatibility across both `amd64` and `arm64` nodes, use Docker Buildx
 
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 \
-  -t <your-dockerhub-username>/demo-api:v1 . \
+  -t dannyanko/infra-demo-api:<version>. \
   --push \
   --provenance=false --sbom=false
 ```
 
 - `--platform` ensures a multi‑arch manifest list is created.  
-- `-t ...:v1` tags the image with a reproducible version (`:v1`).  
+- `-t ...:<version>` tags the image with a reproducible version (`:v1`, `:v2`, etc.).  
 - `--push` uploads directly to Docker Hub.
 
 Verify the manifest list:
 
 ```bash
-docker buildx imagetools inspect <your-dockerhub-username>/demo-api:v1
+docker buildx imagetools inspect dannyanko/infra-demo-api
 ```
 
 ---
 
-#### 🚀 Deploying Blue and Green Versions
+#### 🚀 Deploying Blue, Green, and Red Versions
 
-Create two Deployment manifests:
+Create three Deployment manifests:
 
 **`demo-api/blue.yaml`**
 ```yaml
@@ -414,7 +414,7 @@ spec:
     spec:
       containers:
         - name: demo-api
-          image: <your-dockerhub-username>/demo-api:v1
+          image: dannyanko/infra-demo-api:v2
           env:
           - name: VERSION
             value: "blue"
@@ -428,7 +428,6 @@ spec:
               cpu: "400m"
               memory: "1Gi"
           imagePullPolicy: Always
-
 ```
 
 **`demo-api/green.yaml`**
@@ -438,7 +437,6 @@ kind: Deployment
 metadata:
   name: demo-api-green
   namespace: observability
-  environment: development
 spec:
   replicas: 2
   selector:
@@ -453,34 +451,73 @@ spec:
     spec:
       containers:
         - name: demo-api
-          image: <your-dockerhub-username>/demo-api:v1
-        env:
-        - name: VERSION
-          value: "blue"
-        ports:
-        - containerPort: 5000
-        resources:
-          requests:
-            cpu: "200m"
-            memory: "512Mi"
-          limits:
-            cpu: "400m"
-            memory: "1Gi"
-        imagePullPolicy: Always
+          image: dannyanko/infra-demo-api:v2
+          env:
+          - name: VERSION
+            value: "green"
+          ports:
+          - containerPort: 5000
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "400m"
+              memory: "1Gi"
+          imagePullPolicy: Always
 ```
 
-Apply both:
+**`demo-api/red.yaml`**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-api-red
+  namespace: observability
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: demo-api
+      version: red
+  template:
+    metadata:
+      labels:
+        app: demo-api
+        version: red
+        environment: testing
+    spec:
+      containers:
+        - name: demo-api
+          image: dannyanko/infra-demo-api:v2
+          env:
+          - name: VERSION
+            value: "red"
+          ports:
+          - containerPort: 5000
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "400m"
+              memory: "1Gi"
+          imagePullPolicy: Always
+```
+
+Apply all three:
 
 ```bash
 kubectl apply -f demo-api-blue.yaml -n observability
 kubectl apply -f demo-api-green.yaml -n observability
+kubectl apply -f demo-api-red.yaml -n observability
 ```
 
 ---
 
 #### 🔀 Switching Traffic
 
-Define a Service that selects either `blue` or `green` pods:
+Define a Service that selects either `blue`, `green`, or `red` pods:
 
 **`demo-api-service.yaml`**
 ```yaml
@@ -489,11 +526,10 @@ kind: Service
 metadata:
   name: demo-api
   namespace: observability
-  environment: development
 spec:
   selector:
     app: demo-api
-    version: blue   # 👈 switch here between "blue" and "green"
+    version: blue   # 👈 switch here between "blue", "green", or "red"
   ports:
     - port: 80
       targetPort: 5000
@@ -510,7 +546,7 @@ To switch traffic, edit the Service selector:
 ```yaml
 selector:
   app: demo-api
-  version: green
+  version: red
 ```
 
 Re‑apply:
@@ -523,9 +559,8 @@ kubectl apply -f demo-api-service.yaml -n observability
 
 #### 🌐 Accessing via LoadBalancer Public IP
 
-Instead of using `kubectl port-forward`, expose the `demo-api` Service as a LoadBalancer:
+Expose the `demo-api` Service as a LoadBalancer:
 
-**`demo-api-service.yaml`**
 ```yaml
 apiVersion: v1
 kind: Service
@@ -533,13 +568,13 @@ metadata:
   name: demo-api
   namespace: observability
 spec:
-  type: LoadBalancer   # 👈 ensures a public IP is provisioned
+  type: LoadBalancer
   selector:
     app: demo-api
-    version: blue      # switch between "blue" and "green"
+    version: blue   # switch between "blue", "green", or "red"
   ports:
     - port: 80
-      targetPort: 3000
+      targetPort: 5000
 ```
 
 Apply the Service:
@@ -554,6 +589,8 @@ kubectl apply -f demo-api-service.yaml -n observability
 
 Run:
 
+If you have **not** applied Cloud Armor:
+
 ```bash
 kubectl get svc demo-api -n observability
 ```
@@ -562,11 +599,21 @@ Example output:
 
 ```
 NAME       TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)        AGE
-demo-api   LoadBalancer   10.0.0.123     34.x.x.x          80:3000/TCP    2m
+demo-api   LoadBalancer   10.0.0.123     34.x.x.x          80:5000/TCP    2m
 ```
 
-- The `EXTERNAL-IP` column shows the public IP assigned by your cloud provider (GKE, EKS, AKS).  
-- It may take 1–2 minutes for the IP to be provisioned.
+If you have applied Cloud Armor:
+
+```bash
+kubectl get ingress demo-api-ingress -n observability
+```
+
+Example output:
+
+```
+NAME               CLASS    HOSTS   ADDRESS         PORTS   AGE
+demo-api-ingress   <none>   *       34.x.x.x       80      2d16h
+```
 
 ---
 
@@ -580,6 +627,7 @@ curl http://34.x.x.x/
 
 - When the Service selector points to `version: blue`, responses come from the blue deployment.  
 - When switched to `version: green`, responses come from the green deployment.  
+- When switched to `version: red`, responses come from the red deployment — including simulated error and latency routes for incident practice.
 
 ---
 
@@ -590,7 +638,7 @@ Edit the Service selector:
 ```yaml
 selector:
   app: demo-api
-  version: green
+  version: red
 ```
 
 Re‑apply:
@@ -599,15 +647,16 @@ Re‑apply:
 kubectl apply -f demo-api-service.yaml -n observability
 ```
 
-Within seconds (once green pods are `Ready`), requests to the LoadBalancer IP will start returning green responses.
+Within seconds (once red pods are `Ready`), requests to the LoadBalancer IP will start returning red responses.
 
 ---
 
 #### 🎉 Key Takeaways
-- Use **versioned image tags** (`blue`, `green`) for reproducibility.  
-- Deploy **blue and green** versions side‑by‑side.  
+- Use **versioned image tags** (`blue`, `green`, `red`) for reproducibility.  
+- Deploy **multiple versions side‑by‑side**.  
 - Switch traffic by updating the Service selector.  
-- Validate with `curl` requests to confirm which version is serving traffic.
+- Validate with `curl` requests to confirm which version is serving traffic.  
+- The **red version** provides a safe way to simulate incidents (errors, latency) for observability and response training.
 
 ---
 

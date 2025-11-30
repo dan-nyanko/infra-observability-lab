@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: demo-api
-        image: dannyanko/infra-demo-api:v1
+        image: dannyanko/infra-demo-api:v2
         env:
         - name: VERSION
           value: "green"

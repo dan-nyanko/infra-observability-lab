@@ -1,16 +1,63 @@
 import os
 from flask import Flask
-from prometheus_client import Counter, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import Counter, Histogram, generate_latest, CONTENT_TYPE_LATEST
+import random, time
 
 app = Flask(__name__)
-http_requests_total = Counter('http_requests_total', 'Total HTTP requests')
 
-VERSION = os.getenv("VERSION", "v1")  # default to v1 if not set
+# Track total requests by status/version
+http_requests_total = Counter("http_requests_total", "Total HTTP requests", ["status", "version"])
+
+# Histogram for latency distribution
+http_request_latency_seconds = Histogram(
+    "http_request_latency_seconds",
+    "Request latency in seconds",
+    ["version"]
+)
+
+# Counter for "slow" requests above threshold
+slow_requests_total = Counter(
+    "slow_requests_total",
+    "Requests exceeding latency threshold",
+    ["version"]
+)
+
+VERSION = os.getenv("VERSION", "blue")  # default to "blue" if not set
+LATENCY_THRESHOLD = 1.0  # seconds
 
 @app.route('/')
 def hello():
-    http_requests_total.inc()
+    start = time.time()
+
+    # Simulate latency only for red version
+    if VERSION == "red":
+        time.sleep(random.choice([0, 1, 2, 3]))
+
+    duration = time.time() - start
+
+    # Record latency in histogram
+    http_request_latency_seconds.labels(version=VERSION).observe(duration)
+
+    # Increment slow counter if above threshold
+    if duration > LATENCY_THRESHOLD:
+        slow_requests_total.labels(version=VERSION).inc()
+
+    # Always increment total requests
+    #   Note: Prometheus labels are always strings. Even numeric values like HTTP 
+    #   status codes should be stored as strings for consistency and compatibility
+    #   with PromQL queries.
+    http_requests_total.labels(status="200", version=VERSION).inc()
+
     return f"Hello from demo-api {VERSION}!"
+
+@app.route("/foo")
+def foo():
+    if VERSION == "red":
+        http_requests_total.labels(status="500", version=VERSION).inc()
+        return "Simulated error!", 500
+    else:
+        http_requests_total.labels(status="200", version=VERSION).inc()
+        return f"Bar {VERSION}", 200
 
 @app.route('/metrics')
 def metrics():

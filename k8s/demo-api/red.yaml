@@ -1,22 +1,22 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: demo-api-blue
+  name: demo-api-red
   namespace: observability
   labels:
     app: demo-api
-    version: blue
+    version: red
 spec:
   replicas: 2
   selector:
     matchLabels:
       app: demo-api
-      version: blue
+      version: red
   template:
     metadata:
       labels:
         app: demo-api
-        version: blue
+        version: red
         environment: development
     spec:
       containers:
@@ -24,7 +24,7 @@ spec:
         image: dannyanko/infra-demo-api:v2
         env:
         - name: VERSION
-          value: "blue"
+          value: "red"
         ports:
         - containerPort: 5000
         resources:
