@@ -16,6 +16,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 - Demonstrate **blue/green deployments** using demo‑api.
 - Model **namespace discipline** (`observability` vs `default`) to avoid common pitfalls.
 - Show **security hygiene** by keeping observability tools internal and protecting public endpoints with Cloud Armor.
+- TODO
 
 ---
 
@@ -25,6 +26,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 - **Grafana**: Internal (`ClusterIP`), accessed via port‑forwarding, visualizes Prometheus data.
 - **Cloud Armor**: Protects demo‑api ingress with rate limiting and IP rules.
 - **Namespace separation**: All components live in `observability` to reinforce best practices.
+- TODO
 
 ---
 
@@ -43,6 +45,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 ### Architecture
 
 ![Architecture Diagram](architecture.png)  
+TODO
 
 *A GCP-hosted GKE Autopilot cluster runs Prometheus and Grafana. Metrics are collected from simulated workloads and exposed via exporters. Alerts trigger based on thresholds, and incident simulations validate recovery paths.*
 
@@ -131,6 +134,18 @@ Authenticate and set your project:
 gcloud auth login
 gcloud config set project infra-observability-lab
 gcloud services enable container.googleapis.com
+```
+
+#### Install kustomize library
+ Kustomize is a configuration management tool built into kubectl (and also available as a standalone CLI).
+ 
+ It lets you customize Kubernetes YAML manifests without templates. Instead of writing Helm‑style templating, you define base manifests and then apply overlays (patches, generators, substitutions).
+ 
+ It’s part of the Kubernetes ecosystem and maintained under the kubernetes-sigs project.
+
+
+```bash
+brew install kustomize
 ```
 
 #### Remote State with GCS
@@ -1112,21 +1127,97 @@ kubectl exec -it curlpod -n observability -- curl -v http://demo-api.observabili
 
 ### Run Incident Simulation
 
-```bash
-bash incidents/simulate_cpu_spike.sh
+We deploy a `traffic-gen` pod that continuously hits the demo-api service. This generates synthetic traffic, including errors and latency, so Prometheus and Grafana dashboards show realistic incident patterns.”
+
+---
+
+#### 🐍 Python Traffic Generator Script
+
+```python
+import os
+import time
+import random
+import requests
+
+SERVICE_URL = os.getenv("SERVICE_URL", "http://demo-api.observability.svc.cluster.local")
+INTERVAL = float(os.getenv("INTERVAL", "1.0"))  # seconds between requests
+
+def main():
+    while True:
+        # Randomly choose a route to hit
+        route = random.choice(["/", "/error", "/latency"])
+        url = f"{SERVICE_URL}{route}"
+        try:
+            resp = requests.get(url, timeout=5)
+            print(f"Hit {url} -> {resp.status_code}")
+        except Exception as e:
+            print(f"Request failed: {e}")
+        time.sleep(INTERVAL)
+
+if __name__ == "__main__":
+    main()
 ```
 
-> Observe alerts in Grafana and document recovery steps using `postmortem-template.md`.
+---
+
+#### 📦 Dockerfile
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+COPY traffic_gen.py .
+
+RUN pip install requests
+
+CMD ["python", "traffic_gen.py"]
+```
+
+---
+
+#### 🚀 Kubernetes Deployment
+
+**`traffic-gen.yaml`**
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-gen
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-gen
+  template:
+    metadata:
+      labels:
+        app: traffic-gen
+    spec:
+      containers:
+      - name: traffic-gen
+        image: dannyanko/traffic-gen:v2
+        env:
+        - name: SERVICE_URL
+          value: "http://demo-api.observability.svc.cluster.local"
+        - name: INTERVAL
+          value: "1.0"
+```
+
+---
+
+### 🔹 How it works
+- Runs inside the cluster, hitting the `demo-api` service every second.  
+- Randomly chooses `/`, `/error`, or `/latency`.  
+- Generates traffic so Prometheus scrapes meaningful metrics.  
+- Learners can scale replicas up/down to simulate heavier load.
 
 ---
 
 ### Reliability Principles
 
 This lab reinforces:
-- **Observability-first design**: Metrics, dashboards, and alerting from day one
-- **Infrastructure as code**: Declarative provisioning with Terraform
-- **Incident culture**: Simulations, postmortems, and recovery workflows
-- **CI/CD hygiene**: Automated linting, testing, and deploys via GitHub Actions
+- TODO
 
 ---
 
@@ -1136,3 +1227,4 @@ This lab reinforces:
 - [Prometheus](https://prometheus.io/)
 - [Grafana](https://grafana.com/)
 - [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest)
+- TODO
