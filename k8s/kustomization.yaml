@@ -1,0 +1,33 @@
+resources:
+- demo-api/
+- prometheus/
+- grafana/
+
+namespace: observability
+
+configMapGenerator:
+- literals:
+  - PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
+  - DEMO_API_SELECTOR=blue
+  name: global-config
+
+secretGenerator:
+- envs:
+  - secret.env
+  name: global-secret
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+replacements:
+- source:
+    fieldPath: data.DEMO_API_SELECTOR
+    kind: ConfigMap
+    name: global-config
+    version: v1
+  targets:
+    - select:
+        kind: Service
+        name: demo-api
+      fieldPaths:
+        - spec.selector.version

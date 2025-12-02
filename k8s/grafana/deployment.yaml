@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+        environment: development
+    spec:
+      containers:
+      - name: grafana
+        image: grafana/grafana:11.0.0
+        ports:
+        - containerPort: 3000
+        volumeMounts:
+          - name: grafana-dashboards
+            mountPath: /var/lib/grafana/dashboards
+          - name: grafana-dashboard-providers
+            mountPath: /etc/grafana/provisioning/dashboards
+        resources:
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+          limits:
+            cpu: "400m"
+            memory: "1Gi"
+        env:
+          - name: GF_PATHS_PROVISIONING
+            value: /etc/grafana/provisioning
+          - name: GF_SECURITY_ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                name: global-secret
+                key: GF_SECURITY_ADMIN_USER
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: global-secret
+                key: GF_SECURITY_ADMIN_PASSWORD
+      volumes:
+        - name: grafana-dashboards
+          configMap:
+            name: demo-api-dashboard
+        - name: grafana-dashboard-providers
+          configMap:
+            name: grafana-dashboard-providers

@@ -8,7 +8,7 @@ metadata:
 spec:
   selector:
     app: demo-api
-    version: blue
+    version: ${DEMO_API_SELECTOR}
   ports:
   - port: 80
     targetPort: 5000

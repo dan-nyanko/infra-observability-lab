@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: demo-api-dashboard
+  namespace: observability
+  labels:
+    grafana_dashboard: "1"
+data:
+  demo-api-dashboard.json: |
+    {
+      "id": null,
+      "title": "Demo-API Incident Simulation",
+      "tags": ["observability", "incident", "demo-api"],
+      "timezone": "browser",
+      "schemaVersion": 36,
+      "version": 1,
+      "panels": [
+        {
+          "type": "graph",
+          "title": "Request Rate by Version",
+          "targets": [
+            {
+              "expr": "rate(http_requests_total[1m]) by (version)",
+              "legendFormat": "{{version}}"
+            }
+          ],
+          "id": 1
+        },
+        {
+          "type": "graph",
+          "title": "Error Rate (500s) by Version",
+          "targets": [
+            {
+              "expr": "rate(http_requests_total{status=\"500\"}[1m]) by (version)",
+              "legendFormat": "{{version}}"
+            }
+          ],
+          "id": 2
+        },
+        {
+          "type": "graph",
+          "title": "Latency (95th Percentile) by Version",
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.95, rate(http_request_latency_seconds_bucket[5m])) by (version)",
+              "legendFormat": "{{version}}"
+            }
+          ],
+          "id": 3
+        },
+        {
+          "type": "graph",
+          "title": "Slow Requests by Version",
+          "targets": [
+            {
+              "expr": "rate(slow_requests_total[5m]) by (version)",
+              "legendFormat": "{{version}}"
+            }
+          ],
+          "id": 4
+        },
+        {
+          "type": "graph",
+          "title": "Pod Restarts (Crash Loops)",
+          "targets": [
+            {
+              "expr": "increase(kube_pod_container_status_restarts_total{namespace="observability", version="red"}[5m]) by (pod)",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "id": 5
+        },
+        {
+          "type": "graph",
+          "title": "CPU Throttling (Red Pod)",
+          "targets": [
+            {
+              "expr": "rate(container_cpu_cfs_throttled_seconds_total{pod=~\"demo-api.*\"}[5m])",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "id": 6
+        },
+        {
+          "type": "graph",
+          "title": "Memory Usage (Red Pod)",
+          "targets": [
+            {
+              "expr": "container_memory_working_set_bytes{pod=~\"demo-api.*\"}",
+              "legendFormat": "{{pod}}"
+            }
+          ],
+          "id": 7
+        }
+      ]
+    }

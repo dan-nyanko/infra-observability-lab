@@ -12,3 +12,6 @@ terraform.tfvars
 .DS_Store
 .vscode/
 .idea/
+
+# Sensitive vars
+secret.env

@@ -673,6 +673,106 @@ Within seconds (once red pods are `Ready`), requests to the LoadBalancer IP will
 - Validate with `curl` requests to confirm which version is serving traffic.  
 - The **red version** provides a safe way to simulate incidents (errors, latency) for observability and response training.
 
+### 📦 Kustomization
+
+We organize manifests into component directories (`demo-api/`, `prometheus/`, `grafana/`) and aggregate them at the **top‑level `kustomization.yaml`**:
+
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: observability
+
+resources:
+  - demo-api/
+  - prometheus/
+  - grafana/
+
+configMapGenerator:
+  - name: global-config
+    literals:
+      - PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
+      - DEMO_API_SELECTOR=blue
+
+secretGenerator:
+  - name: global-secret
+    envs:
+      - grafana/secret.env
+
+generatorOptions:
+  disableNameSuffixHash: true
+```
+
+- **resources**: Each subdirectory has its own `kustomization.yaml` and manifests.  
+- **namespace**: Ensures all generated objects land in `observability`.  
+- **generatorOptions**: Disables random suffixes so names are predictable for teaching and queries.
+
+---
+
+#### 🗂️ ConfigMaps
+
+We use ConfigMaps for **global values** and **dashboards**:
+
+- **Global Config** (`global-config`):
+  - Holds literals like `PROMETHEUS_TARGET` and `DEMO_API_SELECTOR`.
+  - These values are patched into Service selectors and Prometheus scrape configs using `replacements`.
+
+- **Prometheus Config**:
+  - Generated from `prometheus/prometheus.yml` using `configMapGenerator`.
+  - This keeps the scrape configuration in a plain YAML file, which Kustomize wraps into a ConfigMap.
+
+- **Grafana Dashboards**:
+  - Dashboards are stored as JSON files (`dashboard.json`) and turned into ConfigMaps with `configMapGenerator`.
+  - Grafana’s sidecar loader imports any ConfigMap labeled `grafana_dashboard=1`.
+
+Teaching note:  
+> ConfigMaps are for non‑sensitive configuration. We keep them versioned in Git so learners can see exactly how values flow into workloads.
+
+---
+
+#### 🔑 Secrets
+
+We use `secretGenerator` to manage sensitive values:
+
+```yaml
+secretGenerator:
+  - name: global-secret
+    envs:
+      - grafana/secret.env
+```
+
+- **`secret.env`** is `.gitignored` so sensitive values never enter version control.  
+- Kustomize generates a Kubernetes Secret from this file at build time.  
+- Grafana and other components mount these secrets as environment variables.
+
+Teaching note:  
+> Secrets are generated from local files, not literals in Git. This models best practice: keep sensitive values out of source control but still reproducible in teaching labs.
+
+---
+
+#### 🚀 Workflow
+
+1. Edit component manifests in their directories.  
+2. Update global values in the top‑level `kustomization.yaml`.  
+3. Run:
+   ```bash
+   kubectl apply -k k8s/
+   ```
+   This applies all resources, ConfigMaps, and Secrets in one shot.  
+4. Restart Deployments when ConfigMaps or Secrets change:
+   ```bash
+   kubectl rollout restart deployment demo-api -n observability
+   ```
+
+---
+
+#### 🧭 Summary for Learners
+
+- **Kustomize**: Manages composition and substitutions across components.  
+- **ConfigMaps**: Store non‑sensitive configuration (targets, selectors, dashboards).  
+- **Secrets**: Store sensitive values, generated from `.env` files.  
+- **Top‑Level Control**: All substitutions and generators live in the root `kustomization.yaml` for clarity and reproducibility.
+
 ---
 
 ### Prometheus
