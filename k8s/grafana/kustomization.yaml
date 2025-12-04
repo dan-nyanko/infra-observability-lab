@@ -3,3 +3,12 @@ kind: Kustomization
 
 resources:
   - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: demo-api-dashboard
+    files:
+      - demo-api-dashboard.json=demo-api-dashboard.json
+
+generatorOptions:
+  disableNameSuffixHash: true
