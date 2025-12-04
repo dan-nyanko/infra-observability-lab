@@ -673,60 +673,143 @@ Within seconds (once red pods are `Ready`), requests to the LoadBalancer IP will
 - Validate with `curl` requests to confirm which version is serving traffic.  
 - The **red version** provides a safe way to simulate incidents (errors, latency) for observability and response training.
 
+Here’s an updated version of those README sections that reflects the **final state** we reached together — using top‑level kustomization, per‑component `kustomization.yaml`, and the initContainer + `envsubst` pattern for Prometheus. I’ve rewritten the flow so learners see exactly how ConfigMaps, `secretGenerator`, and replacements are used in practice:
+
+---
+
 ### 📦 Kustomization
 
-We organize manifests into component directories (`demo-api/`, `prometheus/`, `grafana/`) and aggregate them at the **top‑level `kustomization.yaml`**:
-
-```yaml
-apiVersion: kustomize.config.k8s.io/v1beta1
-kind: Kustomization
-
-namespace: observability
-
-resources:
-  - demo-api/
-  - prometheus/
-  - grafana/
-
-configMapGenerator:
-  - name: global-config
-    literals:
-      - PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
-      - DEMO_API_SELECTOR=blue
-
-secretGenerator:
-  - name: global-secret
-    envs:
-      - grafana/secret.env
-
-generatorOptions:
-  disableNameSuffixHash: true
-```
-
-- **resources**: Each subdirectory has its own `kustomization.yaml` and manifests.  
-- **namespace**: Ensures all generated objects land in `observability`.  
-- **generatorOptions**: Disables random suffixes so names are predictable for teaching and queries.
+We organize manifests into component directories (`demo-api/`, `prometheus/`, `grafana/`) and aggregate them at the **top‑level `kustomization.yaml`**. Each directory has its own `kustomization.yaml` so components remain modular and reproducible.
 
 ---
 
 #### 🗂️ ConfigMaps
 
-We use ConfigMaps for **global values** and **dashboards**:
+We use ConfigMaps for **global values**, **Prometheus templates**, and **Grafana dashboards**:
 
 - **Global Config** (`global-config`):
   - Holds literals like `PROMETHEUS_TARGET` and `DEMO_API_SELECTOR`.
   - These values are patched into Service selectors and Prometheus scrape configs using `replacements`.
 
-- **Prometheus Config**:
-  - Generated from `prometheus/prometheus.yml` using `configMapGenerator`.
-  - This keeps the scrape configuration in a plain YAML file, which Kustomize wraps into a ConfigMap.
+- **Prometheus Config Template**:
+  - Generated from `prometheus/prometheus.yml.template` using `configMapGenerator`.
+  - The template contains `${PROMETHEUS_TARGET}` placeholders.
+  - An initContainer runs `envsubst` to expand those placeholders into a real `prometheus.yml` before Prometheus starts.
 
 - **Grafana Dashboards**:
   - Dashboards are stored as JSON files (`dashboard.json`) and turned into ConfigMaps with `configMapGenerator`.
   - Grafana’s sidecar loader imports any ConfigMap labeled `grafana_dashboard=1`.
 
 Teaching note:  
-> ConfigMaps are for non‑sensitive configuration. We keep them versioned in Git so learners can see exactly how values flow into workloads.
+> ConfigMaps are for non‑sensitive configuration. We keep them versioned in Git so learners can see exactly how values flow into workloads. Prometheus uses a template + initContainer to demonstrate preprocessing.
+
+---
+
+#### 📂 Directory Layout
+```
+k8s/
+├── kustomization.yaml        # top-level
+├── demo-api/
+│   └── kustomization.yaml
+├── prometheus/
+│   ├── kustomization.yaml
+│   └── prometheus.yml.template
+└── grafana/
+    └── kustomization.yaml
+```
+
+---
+
+#### 🔹 prometheus.yml.template
+```yaml
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'demo-api'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["${PROMETHEUS_TARGET}"]
+```
+
+Notice the `${PROMETHEUS_TARGET}` placeholder — the initContainer expands this into a real hostname:port string at runtime.
+
+---
+
+#### 🔹 k8s/prometheus/kustomization.yaml
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - deployment.yaml
+  - service.yaml
+
+configMapGenerator:
+  - name: prometheus-config-template
+    files:
+      - prometheus.yml.template=prometheus.yml.template
+
+generatorOptions:
+  disableNameSuffixHash: true
+```
+
+This generates a ConfigMap with the template file. The initContainer consumes it and writes the expanded config into a shared `emptyDir` volume.
+
+---
+
+#### 🔹 k8s/kustomization.yaml (top-level)
+```yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+- demo-api/
+- prometheus/
+- grafana/
+
+namespace: observability
+
+configMapGenerator:
+- name: global-config
+  literals:
+    - PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
+    - DEMO_API_SELECTOR=blue
+
+secretGenerator:
+- name: global-secret
+  envs:
+    - secret.env
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+replacements:
+- source:
+    kind: ConfigMap
+    name: global-config
+    fieldPath: data.DEMO_API_SELECTOR
+  targets:
+    - select:
+        kind: Service
+        name: demo-api
+      fieldPaths:
+        - spec.selector.version
+```
+
+---
+
+## 🔹 What Happens
+- The `prometheus-config-template` ConfigMap holds the scrape config with `${PROMETHEUS_TARGET}`.
+- The Prometheus Deployment’s initContainer runs `envsubst`, expanding `${PROMETHEUS_TARGET}` into a concrete hostname:port.
+- The rendered file is written into a shared `emptyDir` volume, which the Prometheus container mounts at `/etc/prometheus`.
+- Prometheus starts cleanly and scrapes the correct target.
+
+---
+
+#### 🧭 Teaching Note
+For learners:
+> “Prometheus does not expand environment variables in its config. We use an initContainer with `envsubst` to preprocess the template. This models a reproducible pattern for dynamic configs.”
 
 ---
 
@@ -761,7 +844,7 @@ Teaching note:
    This applies all resources, ConfigMaps, and Secrets in one shot.  
 4. Restart Deployments when ConfigMaps or Secrets change:
    ```bash
-   kubectl rollout restart deployment demo-api -n observability
+   kubectl rollout restart deployment prometheus -n observability
    ```
 
 ---
@@ -769,7 +852,7 @@ Teaching note:
 #### 🧭 Summary for Learners
 
 - **Kustomize**: Manages composition and substitutions across components.  
-- **ConfigMaps**: Store non‑sensitive configuration (targets, selectors, dashboards).  
+- **ConfigMaps**: Store non‑sensitive configuration (targets, selectors, dashboards). Prometheus uses a template + initContainer for expansion.  
 - **Secrets**: Store sensitive values, generated from `.env` files.  
 - **Top‑Level Control**: All substitutions and generators live in the root `kustomization.yaml` for clarity and reproducibility.
 
@@ -777,98 +860,13 @@ Teaching note:
 
 ### Prometheus
 
-Here’s a safe **Prometheus ConfigMap template** that matches the same `envsubst` style we used for Grafana secrets. This way, you can keep scrape targets flexible and reproducible without hard‑coding cluster service names:
+Prometheus requires scrape targets to be defined. To keep the repo safe and flexible, we use a **template ConfigMap** (`prometheus.yml.template`) with an environment variable placeholder. An initContainer expands it into a real config before Prometheus starts.
 
 ---
-
-#### 📄 `k8s/prometheus/prometheus-config.yaml`
-```yaml
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-config
-  namespace: observability
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 15s
-
-    scrape_configs:
-      - job_name: 'demo-api'
-        static_configs:
-          - targets: ["${PROMETHEUS_TARGET}"]
-```
----
-
-Prometheus requires scrape targets to be defined. To keep the repo safe and flexible, we use a template ConfigMap (`prometheus-config.yaml`) with an environment variable placeholder.
-
-1. Export your target service:
-   ```bash
-   export PROMETHEUS_TARGET=demo-api.observability.svc.cluster.local:80
-   ```
-
-2. Apply the config using `envsubst`:
-   ```bash
-   envsubst < k8s/prometheus/prometheus-config.yaml | kubectl apply -f -
-   ```
-
-3. Deploy Prometheus:
-   ```bash
-   kubectl apply -f k8s/prometheus/prometheus-deployment.yaml
-   kubectl apply -f k8s/prometheus/prometheus-service.yaml
-   ```
-
-Prometheus will now scrape metrics from the `infra-demo-api` service.
 
 ### Grafana
 
-#### 📄 `k8s/grafana/grafana-secret.yaml`
-```yaml
-apiVersion: v1
-kind: Secret
-metadata:
-  name: grafana-admin-secret
-  namespace: observability
-type: Opaque
-stringData:
-  GF_SECURITY_ADMIN_PASSWORD: "${GRAFANA_PASSWORD}"
-```
-
-- Note: `${GRAFANA_PASSWORD}` is a placeholder.  
-- You’ll set the environment variable in your shell before applying.
-
-#### 🔐 Grafana Admin Password
-
-Grafana requires an admin password. For security, we don’t commit real secrets into Git.
-Instead, we use a template Secret manifest (`grafana-secret.yaml`) with a placeholder.
-
-1. Export your password as an environment variable:
-   ```bash
-   export GRAFANA_PASSWORD=supersecure
-   ```
-
-2. Apply the secret using `envsubst`:
-   ```bash
-   envsubst < k8s/grafana/grafana-secret.yaml | kubectl apply -f -
-   ```
-
-3. Deploy Grafana:
-   ```bash
-   kubectl apply -f k8s/grafana/grafana-deployment.yaml
-   kubectl apply -f k8s/grafana/grafana-service.yaml
-   ```
-
-4. Log in:
-   - URL: `http://<EXTERNAL-IP>:3000`
-   - User: `admin`
-   - Password: the value you set in `$GRAFANA_PASSWORD`
-
----
-
-#### 🧭 Why this is best practice
-- **No secrets in Git** → you only commit a template.  
-- **Reproducible** → anyone cloning the repo can follow the same workflow.  
-- **Flexible** → rotate passwords by re‑exporting `GRAFANA_PASSWORD` and re‑applying the Secret.  
+Grafana requires an admin password. For security, we don’t commit real secrets into Git. Instead, we use `secretGenerator` with a `.gitignored` `secret.env` file. Grafana mounts the generated Secret as environment variables.
 
 ---
 
