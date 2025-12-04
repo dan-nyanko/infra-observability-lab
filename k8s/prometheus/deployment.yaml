@@ -14,9 +14,36 @@ spec:
         app: prometheus
         environment: development
     spec:
+      initContainers:
+      - name: render-config
+        image: alpine:3.20
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+        command:
+          - sh
+          - -c
+          - |
+            apk add --no-cache gettext
+            envsubst < /config-template/prometheus.yml.template > /etc/prometheus/prometheus.yml
+        envFrom:
+          - configMapRef:
+              name: global-config
+        volumeMounts:
+          - name: config-template
+            mountPath: /config-template
+          - name: rendered-config
+            mountPath: /etc/prometheus
+
       containers:
       - name: prometheus
         image: prom/prometheus:v2.52.0
+        args:
+          - --config.file=/etc/prometheus/prometheus.yml
         ports:
         - containerPort: 9090
         resources:
@@ -27,10 +54,11 @@ spec:
             cpu: "500m"
             memory: "1Gi"
         volumeMounts:
-        - name: config-volume
+        - name: rendered-config
           mountPath: /etc/prometheus
       volumes:
-      - name: config-volume
+      - name: config-template
         configMap:
-          name: prometheus-config
-
+          name: prometheus-config-template
+      - name: rendered-config
+        emptyDir: {}
