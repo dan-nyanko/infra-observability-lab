@@ -1380,6 +1380,90 @@ This lab reinforces:
 
 ---
 
+### 🧑‍💻 Kubernetes CLI Efficiency for CKA Prep
+
+This lab emphasizes **real `kubectl` usage** (no GUIs or wrappers) while adding small efficiency boosts that reduce typing errors and speed up workflows. These practices are exam‑safe and build muscle memory for the CKA.
+
+---
+
+#### 🔹 Shell Autocompletion
+Enable tab‑completion for resource types, names, and flags:
+
+```bash
+# Bash
+source <(kubectl completion bash)
+
+# Zsh
+source <(kubectl completion zsh)
+```
+
+---
+
+#### 🔹 Aliases
+Shorten commands without hiding flags:
+
+```bash
+alias k=kubectl
+alias kctx='kubectl config use-context'
+alias kns='kubectl config set-context --current --namespace'
+```
+
+---
+
+#### 🔹 Output Formatting
+Practice JSONPath and custom columns:
+
+```bash
+# Wide output
+k get pods -o wide
+
+# Custom columns
+k get pods -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName
+
+# JSONPath
+k get pods -o jsonpath='{.items[*].metadata.name}'
+```
+
+---
+
+#### 🔹 Context Management
+Switch clusters and namespaces quickly:
+
+```bash
+k config use-context <context-name>
+k config set-context --current --namespace=observability
+```
+
+---
+
+#### 🔹 Monitoring Rollouts
+Use `watch` to track changes in real time:
+
+```bash
+watch -n1 kubectl get pods
+```
+
+---
+
+#### 🔹 Built‑in Learning Aid
+Use `kubectl explain` to explore resource schemas:
+
+```bash
+k explain pod.spec.containers
+```
+
+---
+
+#### 🚫 Tools to Avoid for CKA Prep
+- **K9s, Lens, GUIs** → Great in production, but they abstract away raw commands.
+- **Wrapper scripts** → Save time but don’t build exam‑critical muscle memory.
+
+---
+
+#### 🧭 Teaching Note
+> Efficiency for CKA prep means **autocompletion, aliases, and output formatting** — not hiding `kubectl` behind GUIs. You want speed without losing command fluency.
+
+---
 ### References
 
 - [GoogleCloudPlatform/platform-engineering](https://github.com/GoogleCloudPlatform/platform-engineering)
