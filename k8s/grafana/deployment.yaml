@@ -24,6 +24,9 @@ spec:
             mountPath: /var/lib/grafana/dashboards
           - name: grafana-dashboard-providers
             mountPath: /etc/grafana/provisioning/dashboards
+          - name: grafana-datasources
+            mountPath: /etc/grafana/provisioning/datasources/prometheus.yaml
+            subPath: prometheus.yaml
         resources:
           requests:
             cpu: "200m"
@@ -51,3 +54,6 @@ spec:
         - name: grafana-dashboard-providers
           configMap:
             name: grafana-dashboard-providers
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources

@@ -9,6 +9,9 @@ configMapGenerator:
   - name: demo-api-dashboard
     files:
       - demo-api-dashboard.json=demo-api-dashboard.json
+  - name: grafana-datasources
+    files:
+      - prometheus.yaml
 
 generatorOptions:
   disableNameSuffixHash: true
