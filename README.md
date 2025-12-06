@@ -898,6 +898,19 @@ volumes:
       claimName: prometheus-data
 ```
 
+---
+
+#### 🔹 Optional: PV reclaim policy
+By default, dynamically provisioned PVs use `Delete`. If you want to **guarantee the disk isn’t recycled**, you can patch the PV after it’s created:
+
+```bash
+kubectl patch pv <pv-name> -p '{"spec":{"persistentVolumeReclaimPolicy":"Retain"}}'
+```
+
+> This ensures the underlying GCE disk survives even if the PVC is deleted.
+
+---
+
 > Prometheus runs as a non‑root user (UID 65534). PVCs default to root ownership, so you must fix permissions. Aligning the PVC with Prometheus’s UID/GID is safe and standard practice.
 
 ```yaml
@@ -916,6 +929,51 @@ volumes:
           - name: prometheus-storage
             mountPath: /prometheus
 ```
+---
+
+#### 📦 `prometheus-rules.yaml`
+
+> Alerting rules tuned for `demo-api` simulation, includes both a **high error rate alert** and a **crash detection alert** based on container restarts.
+
+```yaml
+groups:
+  - name: demo-api.rules
+    interval: 30s
+    rules:
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{status="500"}[1m]) > 5
+        for: 1m
+        labels:
+          severity: page
+          team: observability
+        annotations:
+          summary: "High error rate detected in demo-api"
+          description: "More than 5 HTTP 500 errors per second for 1 minute. Investigate active version and traffic pattern."
+
+      - alert: CrashLoopDetected
+        expr: increase(kube_pod_container_status_restarts_total{pod=~"demo-api-.*"}[5m]) > 3
+        for: 1m
+        labels:
+          severity: page
+          team: platform
+        annotations:
+          summary: "Crash loop detected in demo-api pod"
+          description: "Container restarted more than 3 times in 5 minutes. Check logs, resource limits, and traffic generator behavior."
+```
+
+---
+
+#### 🔍 Alert Logic Breakdown
+
+| Alert Name         | Trigger Expression                                                                 | Purpose |
+|--------------------|-------------------------------------------------------------------------------------|---------|
+| `HighErrorRate`    | `rate(http_requests_total{status="500"}[1m]) > 5`                                   | Detects backend errors under load |
+| `CrashLoopDetected`| `increase(kube_pod_container_status_restarts_total{pod=~"demo-api-.*"}[5m]) > 3`   | Detects unstable pods restarting repeatedly |
+
+---
+
+#### 🧭 Teaching note for learners
+> “Prometheus alerts help detect incidents early. This lab models both backend errors and crash loops, so learners can practice triage and recovery using real metrics.”
 
 ---
 

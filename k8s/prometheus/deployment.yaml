@@ -8,6 +8,8 @@ spec:
   selector:
     matchLabels:
       app: prometheus
+  strategy:
+    type: Recreate
   template:
     metadata:
       labels:
@@ -57,6 +59,8 @@ spec:
         image: prom/prometheus:v2.52.0
         args:
           - --config.file=/etc/prometheus/prometheus.yml
+          - "--storage.tsdb.path=/prometheus"
+          - "--web.enable-lifecycle"
         ports:
         - containerPort: 9090
         resources:
@@ -71,6 +75,9 @@ spec:
           mountPath: /prometheus
         - name: rendered-config
           mountPath: /etc/prometheus
+        - name: prometheus-rules
+          mountPath: /etc/prometheus/rules
+          readOnly: true
       volumes:
       - name: prometheus-storage
         persistentVolumeClaim:
@@ -80,3 +87,6 @@ spec:
           name: prometheus-config-template
       - name: rendered-config
         emptyDir: {}
+      - name: prometheus-rules
+        configMap:
+          name: prometheus-rules

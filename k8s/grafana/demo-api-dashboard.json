@@ -110,6 +110,30 @@
         "uid": "prometheus"
       },
       "id": 7
+    },
+    {
+      "title": "Active Prometheus Alerts",
+      "type": "table",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "targets": [
+        {
+          "expr": "ALERTS{alertstate=\"firing\"}",
+          "legendFormat": "{{alertname}} - {{severity}}",
+          "refId": "A"
+        }
+      ],
+      "columns": [
+        { "text": "Alert Name", "value": "alertname" },
+        { "text": "Severity", "value": "severity" },
+        { "text": "State", "value": "alertstate" }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "id": 8
     }
   ]
 }

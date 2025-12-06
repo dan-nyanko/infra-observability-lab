@@ -10,6 +10,9 @@ configMapGenerator:
   - name: prometheus-config-template
     files:
       - prometheus.yml.template=prometheus.yml.template
+  - name: prometheus-rules
+    files:
+      - prometheus-rules.yml
 
 generatorOptions:
   disableNameSuffixHash: true
