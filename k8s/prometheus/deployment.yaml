@@ -15,6 +15,19 @@ spec:
         environment: development
     spec:
       initContainers:
+      - name: init-prometheus-data
+        image: busybox
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+        command: ["sh", "-c", "mkdir -p /prometheus/data"]
+        volumeMounts:
+          - name: prometheus-storage
+            mountPath: /prometheus
       - name: render-config
         image: alpine:3.20
         resources:
