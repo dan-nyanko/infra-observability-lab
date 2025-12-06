@@ -862,11 +862,72 @@ Teaching note:
 
 Prometheus requires scrape targets to be defined. To keep the repo safe and flexible, we use a **template ConfigMap** (`prometheus.yml.template`) with an environment variable placeholder. An initContainer expands it into a real config before Prometheus starts.
 
+#### PersistentVolumeClaim PVC
+Prometheus always writes data to /prometheus. Without a PVC, that’s ephemeral. Mounting a PVC makes the TSDB persistent, so metrics survive pod restarts and rescheduling.
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-data
+  namespace: observability
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi   # adjust size as needed
+  storageClassName: standard  # or your cluster’s default storage class
+```
+
+- ReadWriteOnce is fine for a single Prometheus pod.
+- storageClassName should match your cluster’s default (often standard on GKE, gp2 on EKS, etc.).
+
+#### Patch Prometheus Deployment
+
+In Prometheus Deployment (k8s/prometheus/deployment.yaml), add:
+
+```yaml
+volumeMounts:
+  - name: prometheus-storage
+    mountPath: /prometheus
+
+volumes:
+  - name: prometheus-storage
+    persistentVolumeClaim:
+      claimName: prometheus-data
+```
+
 ---
 
 ### Grafana
 
 Grafana requires an admin password. For security, we don’t commit real secrets into Git. Instead, we use `secretGenerator` with a `.gitignored` `secret.env` file. Grafana mounts the generated Secret as environment variables.
+
+#### Grafana Datasources
+
+Provisioning datasources with a fixed UID e.g. `prometheus` makes dashboards reproducible. Grafana loads them at startup, so dashboards always point to the right datasource without manual wiring.”
+
+**`k8s/grafana/prometheus.yaml`**
+```yaml
+apiVersion: 1
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    uid: prometheus  # 👈 important
+```
+
+Each panel in `demo-api-dashboard.json` should reference this datasource:
+
+yaml```
+"datasource": {
+  "type": "prometheus",
+  "uid": "prometheus"
+}
+```
 
 ---
 

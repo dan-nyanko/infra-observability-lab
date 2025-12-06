@@ -54,9 +54,14 @@ spec:
             cpu: "500m"
             memory: "1Gi"
         volumeMounts:
+        - name: prometheus-storage
+          mountPath: /prometheus
         - name: rendered-config
           mountPath: /etc/prometheus
       volumes:
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-data
       - name: config-template
         configMap:
           name: prometheus-config-template
