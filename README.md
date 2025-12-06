@@ -898,6 +898,25 @@ volumes:
       claimName: prometheus-data
 ```
 
+> Prometheus runs as a non‑root user (UID 65534). PVCs default to root ownership, so you must fix permissions. Aligning the PVC with Prometheus’s UID/GID is safe and standard practice.
+
+```yaml
+      initContainers:
+      - name: init-prometheus-data
+        image: busybox
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+        command: ["sh", "-c", "mkdir -p /prometheus/data && chown -R 65534:65534 /prometheus"]
+        volumeMounts:
+          - name: prometheus-storage
+            mountPath: /prometheus
+```
+
 ---
 
 ### Grafana

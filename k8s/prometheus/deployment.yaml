@@ -24,7 +24,7 @@ spec:
           limits:
             cpu: "100m"
             memory: "128Mi"
-        command: ["sh", "-c", "mkdir -p /prometheus/data"]
+        command: ["sh", "-c", "mkdir -p /prometheus/data && chown -R 65534:65534 /prometheus"]
         volumeMounts:
           - name: prometheus-storage
             mountPath: /prometheus
