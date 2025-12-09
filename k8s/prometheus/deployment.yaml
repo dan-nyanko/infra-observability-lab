@@ -17,76 +17,81 @@ spec:
         environment: development
     spec:
       initContainers:
-      - name: init-prometheus-data
-        image: busybox
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "64Mi"
-          limits:
-            cpu: "100m"
-            memory: "128Mi"
-        command: ["sh", "-c", "mkdir -p /prometheus/data && chown -R 65534:65534 /prometheus"]
-        volumeMounts:
-          - name: prometheus-storage
-            mountPath: /prometheus
-      - name: render-config
-        image: alpine:3.20
-        resources:
-          requests:
-            cpu: "50m"
-            memory: "64Mi"
-          limits:
-            cpu: "100m"
-            memory: "128Mi"
-        command:
-          - sh
-          - -c
-          - |
-            apk add --no-cache gettext
-            envsubst < /config-template/prometheus.yml.template > /etc/prometheus/prometheus.yml
-        envFrom:
-          - configMapRef:
-              name: global-config
-        volumeMounts:
-          - name: config-template
-            mountPath: /config-template
-          - name: rendered-config
-            mountPath: /etc/prometheus
+        - name: init-prometheus-data
+          image: busybox
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          command:
+            [
+              "sh",
+              "-c",
+              "mkdir -p /prometheus/data && chown -R 65534:65534 /prometheus",
+            ]
+          volumeMounts:
+            - name: prometheus-storage
+              mountPath: /prometheus
+        - name: render-config
+          image: alpine:3.20
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          command:
+            - sh
+            - -c
+            - |
+              apk add --no-cache gettext
+              envsubst < /config-template/prometheus.yml.template > /etc/prometheus/prometheus.yml
+          envFrom:
+            - configMapRef:
+                name: global-config
+          volumeMounts:
+            - name: config-template
+              mountPath: /config-template
+            - name: rendered-config
+              mountPath: /etc/prometheus
 
       containers:
-      - name: prometheus
-        image: prom/prometheus:v2.52.0
-        args:
-          - --config.file=/etc/prometheus/prometheus.yml
-          - "--storage.tsdb.path=/prometheus"
-          - "--web.enable-lifecycle"
-        ports:
-        - containerPort: 9090
-        resources:
-          requests:
-            cpu: "250m"
-            memory: "512Mi"
-          limits:
-            cpu: "500m"
-            memory: "1Gi"
-        volumeMounts:
-        - name: prometheus-storage
-          mountPath: /prometheus
-        - name: rendered-config
-          mountPath: /etc/prometheus
-        - name: prometheus-rules
-          mountPath: /etc/prometheus/rules
-          readOnly: true
+        - name: prometheus
+          image: prom/prometheus:v2.52.0
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - "--storage.tsdb.path=/prometheus"
+            - "--web.enable-lifecycle"
+          ports:
+            - containerPort: 9090
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "500m"
+              memory: "1Gi"
+          volumeMounts:
+            - name: prometheus-storage
+              mountPath: /prometheus
+            - name: rendered-config
+              mountPath: /etc/prometheus
+            - name: prometheus-rules
+              mountPath: /etc/prometheus/rules
+              readOnly: true
       volumes:
-      - name: prometheus-storage
-        persistentVolumeClaim:
-          claimName: prometheus-data
-      - name: config-template
-        configMap:
-          name: prometheus-config-template
-      - name: rendered-config
-        emptyDir: {}
-      - name: prometheus-rules
-        configMap:
-          name: prometheus-rules
+        - name: prometheus-storage
+          persistentVolumeClaim:
+            claimName: prometheus-data
+        - name: config-template
+          configMap:
+            name: prometheus-config-template
+        - name: rendered-config
+          emptyDir: {}
+        - name: prometheus-rules
+          configMap:
+            name: prometheus-rules

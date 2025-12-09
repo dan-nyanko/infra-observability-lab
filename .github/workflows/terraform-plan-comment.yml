@@ -3,7 +3,7 @@ name: Terraform Plan (PR Comment)
 on:
   pull_request:
     paths:
-      - 'terraform/**'
+      - "terraform/**"
 
 jobs:
   terraform-plan:
@@ -11,7 +11,7 @@ jobs:
 
     permissions:
       contents: read
-      pull-requests: write  # Needed to comment on PRs
+      pull-requests: write # Needed to comment on PRs
 
     env:
       GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_TF_KEY }}

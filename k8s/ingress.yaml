@@ -4,15 +4,15 @@ metadata:
   name: demo-api-ingress
   namespace: observability
   annotations:
-    spec.ingressClassName: "gce"   # Use GCE ingress controller
+    spec.ingressClassName: "gce" # Use GCE ingress controller
 spec:
   rules:
-  - http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: demo-api
-            port:
-              number: 80
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: demo-api
+                port:
+                  number: 80

@@ -1,0 +1,40 @@
+repos:
+  # 🔹 YAML lint (reports issues, no auto-fix)
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.35.1
+    hooks:
+      - id: yamllint
+
+  # 🔹 YAML auto-fix (Prettier handles indentation/spacing)
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v3.1.0 # match Prettier version git ls-remote https://github.com/pre-commit/mirrors-prettier
+    hooks:
+      - id: prettier
+        files: \.(yml|yaml)$
+
+  # 🔹 JSON auto-fix (pretty-print)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: pretty-format-json
+        args: [--autofix, --indent=2]
+
+  # 🔹 Python import sorting (auto-fix)
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: ["--profile", "black"] # align with black
+
+  # 🔹 Python formatting (auto-fix)
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+
+  # 🔹 Whitespace hygiene (auto-fix)
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer

@@ -11,7 +11,7 @@ configMapGenerator:
       - demo-api-dashboard.json=demo-api-dashboard.json
   - name: grafana-datasources
     files:
-      - prometheus.yaml
+      - prometheus.yml
 
 generatorOptions:
   disableNameSuffixHash: true

@@ -14,26 +14,26 @@ spec:
         app: traffic-gen
     spec:
       containers:
-      - name: traffic-gen
-        image: dannyanko/infra-traffic-gen:v2
-        env:
-        - name: SERVICE_URL
-          value: "http://demo-api.observability.svc.cluster.local"
-        - name: INTERVAL
-          value: "1.0"
-        - name: INTERVAL_JITTER
-          value: "0.5"
-        - name: CRASH_INTERVAL
-          value: "30"
-        - name: BURST_CHANCE
-          value: "1.0"
-        - name: MAX_BURST_SIZE
-          value: "15"
-        resources:
-          requests:
-            cpu: "100m"
-            memory: "128Mi"
-          limits:
-            cpu: "100m"
-            memory: "256Mi"
-        imagePullPolicy: Always
+        - name: traffic-gen
+          image: dannyanko/infra-traffic-gen:v2
+          env:
+            - name: SERVICE_URL
+              value: "http://demo-api.observability.svc.cluster.local"
+            - name: INTERVAL
+              value: "1.0"
+            - name: INTERVAL_JITTER
+              value: "0.5"
+            - name: CRASH_INTERVAL
+              value: "30"
+            - name: BURST_CHANCE
+              value: "1.0"
+            - name: MAX_BURST_SIZE
+              value: "15"
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "100m"
+              memory: "256Mi"
+          imagePullPolicy: Always

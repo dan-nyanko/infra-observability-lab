@@ -1,122 +1,133 @@
 {
   "id": null,
-  "title": "Demo-API Incident Simulation",
-  "tags": ["observability", "incident", "demo-api"],
-  "timezone": "browser",
-  "schemaVersion": 36,
-  "version": 1,
   "panels": [
     {
-      "type": "graph",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 1,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total[1m])",
+          "legendFormat": "{{version}}"
+        }
+      ],
       "title": "Request Rate",
-      "targets": [
-      {
-        "expr": "rate(http_requests_total[1m])",
-        "legendFormat": "{{version}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 1
-    },
-    {
-      "type": "graph",
+      "id": 2,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{status=\"500\"}[1m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
       "title": "Error Rate (500s)",
-      "targets": [
-      {
-        "expr": "rate(http_requests_total{status=\"500\"}[1m])",
-        "legendFormat": "{{pod}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 2
-    },
-    {
-      "type": "graph",
+      "id": 3,
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, rate(http_request_latency_seconds_bucket[5m]))",
+          "legendFormat": "{{version}}"
+        }
+      ],
       "title": "Latency (95th Percentile)",
-      "targets": [
-      {
-        "expr": "histogram_quantile(0.95, rate(http_request_latency_seconds_bucket[5m]))",
-        "legendFormat": "{{version}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 3
-    },
-    {
-      "type": "graph",
+      "id": 4,
+      "targets": [
+        {
+          "expr": "rate(slow_requests_total[5m])",
+          "legendFormat": "{{version}}"
+        }
+      ],
       "title": "Slow Requests",
-      "targets": [
-      {
-        "expr": "rate(slow_requests_total[5m])",
-        "legendFormat": "{{version}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 4
-    },
-    {
-      "type": "graph",
+      "id": 5,
+      "targets": [
+        {
+          "expr": "increase(kube_pod_container_status_restarts_total[5m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
       "title": "Pod Restarts",
-      "targets": [
-      {
-        "expr": "increase(kube_pod_container_status_restarts_total[5m])",
-        "legendFormat": "{{pod}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 5
-    },
-    {
-      "type": "graph",
+      "id": 6,
+      "targets": [
+        {
+          "expr": "rate(container_cpu_cfs_throttled_seconds_total[5m])",
+          "legendFormat": "{{pod}}"
+        }
+      ],
       "title": "CPU Throttling",
-      "targets": [
-      {
-        "expr": "rate(container_cpu_cfs_throttled_seconds_total[5m])",
-        "legendFormat": "{{pod}}"
-      }
-      ],
+      "type": "graph"
+    },
+    {
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 6
-    },
-    {
-      "type": "graph",
+      "id": 7,
+      "targets": [
+        {
+          "expr": "container_memory_working_set_bytes",
+          "legendFormat": "{{pod}}"
+        }
+      ],
       "title": "Memory Usage",
-      "targets": [
-      {
-        "expr": "container_memory_working_set_bytes",
-        "legendFormat": "{{pod}}"
-      }
+      "type": "graph"
+    },
+    {
+      "columns": [
+        {
+          "text": "Alert Name",
+          "value": "alertname"
+        },
+        {
+          "text": "Severity",
+          "value": "severity"
+        },
+        {
+          "text": "State",
+          "value": "alertstate"
+        }
       ],
       "datasource": {
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "id": 7
-    },
-    {
-      "title": "Active Prometheus Alerts",
-      "type": "table",
-      "datasource": {
-        "type": "prometheus",
-        "uid": "prometheus"
+      "id": 8,
+      "options": {
+        "showHeader": true
       },
       "targets": [
         {
@@ -125,15 +136,17 @@
           "refId": "A"
         }
       ],
-      "columns": [
-        { "text": "Alert Name", "value": "alertname" },
-        { "text": "Severity", "value": "severity" },
-        { "text": "State", "value": "alertstate" }
-      ],
-      "options": {
-        "showHeader": true
-      },
-      "id": 8
+      "title": "Active Prometheus Alerts",
+      "type": "table"
     }
-  ]
+  ],
+  "schemaVersion": 36,
+  "tags": [
+    "observability",
+    "incident",
+    "demo-api"
+  ],
+  "timezone": "browser",
+  "title": "Demo-API Incident Simulation",
+  "version": 1
 }

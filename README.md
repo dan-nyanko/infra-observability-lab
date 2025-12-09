@@ -44,7 +44,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 
 ### Architecture
 
-![Architecture Diagram](architecture.png)  
+![Architecture Diagram](architecture.png)
 TODO
 
 *A GCP-hosted GKE Autopilot cluster runs Prometheus and Grafana. Metrics are collected from simulated workloads and exposed via exporters. Alerts trigger based on thresholds, and incident simulations validate recovery paths.*
@@ -138,9 +138,9 @@ gcloud services enable container.googleapis.com
 
 #### Install kustomize library
  Kustomize is a configuration management tool built into kubectl (and also available as a standalone CLI).
- 
+
  It lets you customize Kubernetes YAML manifests without templates. Instead of writing Helm‑style templating, you define base manifests and then apply overlays (patches, generators, substitutions).
- 
+
  It’s part of the Kubernetes ecosystem and maintained under the kubernetes-sigs project.
 
 
@@ -201,7 +201,7 @@ To allow Terraform to authenticate with Google Cloud during CI/CD runs, you’ll
 
 •  Open your GitHub repo → Settings → Secrets and variables → Actions → New repository secret.
 •  Name the secret: GCP_TF_KEY.
-•  Paste the entire JSON key file contents into the value field.  
+•  Paste the entire JSON key file contents into the value field.
 
 > On macOS you can copy the file contents with pbcopy < ~/.gcp/key.json and paste directly.
 
@@ -218,8 +218,8 @@ Run once per new environment or after adding providers/modules:
 terraform init
 ```
 
-- Downloads the required provider plugins (e.g., `google`).  
-- Sets up the backend for state storage.  
+- Downloads the required provider plugins (e.g., `google`).
+- Sets up the backend for state storage.
 - Prepares the working directory for use.
 
 ---
@@ -231,8 +231,8 @@ Generate an execution plan to see what Terraform will do:
 terraform plan
 ```
 
-- Shows resources to be created, updated, or destroyed.  
-- Safe to run multiple times.  
+- Shows resources to be created, updated, or destroyed.
+- Safe to run multiple times.
 - Use this step in CI/CD workflows for review before apply.
 
 ---
@@ -244,8 +244,8 @@ Provision the resources in GCP:
 terraform apply
 ```
 
-- Executes the plan and creates the infrastructure.  
-- Prompts for confirmation unless `-auto-approve` is used.  
+- Executes the plan and creates the infrastructure.
+- Prompts for confirmation unless `-auto-approve` is used.
 - Example: creates the GKE cluster defined in your configuration.
 
 ---
@@ -257,8 +257,8 @@ Once the cluster is provisioned, configure `kubectl` to talk to it:
 gcloud container clusters get-credentials observability-lab --region us-central1
 ```
 
-- Updates your local `~/.kube/config` with cluster credentials.  
-- Sets the current context to the new cluster.  
+- Updates your local `~/.kube/config` with cluster credentials.
+- Sets the current context to the new cluster.
 
 Verify connectivity:
 
@@ -268,8 +268,8 @@ kubectl get pods --all-namespaces
 ```
 
 #### Workflow Hygiene
-- Always run `plan` before `apply` to review changes.  
-- Use GitHub Actions workflows to automate `plan` (PR) and `apply` (merge).  
+- Always run `plan` before `apply` to review changes.
+- Use GitHub Actions workflows to automate `plan` (PR) and `apply` (merge).
 - Document incidents and recovery steps in the README for reproducibility.
 
 ---
@@ -279,30 +279,30 @@ kubectl get pods --all-namespaces
 After provisioning the GKE cluster with Terraform, you may see warnings in the Cloud Console:
 
 #### ⚠️ Verify Webhook Endpoints
-- **Meaning**: Admission webhooks (used for policy enforcement or mutating workloads) must be reachable and healthy.  
-- **Action**:  
-  - If you haven’t deployed custom webhooks, you can ignore this for now.  
+- **Meaning**: Admission webhooks (used for policy enforcement or mutating workloads) must be reachable and healthy.
+- **Action**:
+  - If you haven’t deployed custom webhooks, you can ignore this for now.
   - If you add webhooks later, confirm they’re accessible from the cluster and don’t block pod scheduling (`kubectl describe pod` will show webhook errors).
 
 
 #### ⚠️ Set Maintenance Window
-- **Meaning**: GKE automatically upgrades control plane and nodes. By default, upgrades can occur at any time.  
-- **Action**:  
-  - In the Cloud Console, go to **Cluster details → Maintenance window**.  
-  - Set a preferred time (e.g., 2–4 AM local) when upgrades are least disruptive.  
+- **Meaning**: GKE automatically upgrades control plane and nodes. By default, upgrades can occur at any time.
+- **Action**:
+  - In the Cloud Console, go to **Cluster details → Maintenance window**.
+  - Set a preferred time (e.g., 2–4 AM local) when upgrades are least disruptive.
   - This is optional in a lab, but demonstrates proactive ops hygiene.
 
 ---
 
 #### ⚠️ Common Setup Errors
-- **403: Kubernetes Engine API not enabled**  
+- **403: Kubernetes Engine API not enabled**
   Enable it before running `apply`:
   ```bash
   gcloud services enable container.googleapis.com
   ```
-- **Pods stuck in `Pending`**  
-  - Cluster may still be initializing — wait a few minutes.  
-  - Check pod events with `kubectl describe pod <name>`.  
+- **Pods stuck in `Pending`**
+  - Cluster may still be initializing — wait a few minutes.
+  - Check pod events with `kubectl describe pod <name>`.
   - Ensure resource requests/limits are compatible with Autopilot.
 
 ---
@@ -391,8 +391,8 @@ docker buildx build --platform linux/amd64,linux/arm64 \
   --provenance=false --sbom=false
 ```
 
-- `--platform` ensures a multi‑arch manifest list is created.  
-- `-t ...:<version>` tags the image with a reproducible version (`:v1`, `:v2`, etc.).  
+- `--platform` ensures a multi‑arch manifest list is created.
+- `-t ...:<version>` tags the image with a reproducible version (`:v1`, `:v2`, etc.).
 - `--push` uploads directly to Docker Hub.
 
 Verify the manifest list:
@@ -640,8 +640,8 @@ Once the external IP is available:
 curl http://34.x.x.x/
 ```
 
-- When the Service selector points to `version: blue`, responses come from the blue deployment.  
-- When switched to `version: green`, responses come from the green deployment.  
+- When the Service selector points to `version: blue`, responses come from the blue deployment.
+- When switched to `version: green`, responses come from the green deployment.
 - When switched to `version: red`, responses come from the red deployment — including simulated error and latency routes for incident practice.
 
 ---
@@ -667,10 +667,10 @@ Within seconds (once red pods are `Ready`), requests to the LoadBalancer IP will
 ---
 
 #### 🎉 Key Takeaways
-- Use **versioned image tags** (`blue`, `green`, `red`) for reproducibility.  
-- Deploy **multiple versions side‑by‑side**.  
-- Switch traffic by updating the Service selector.  
-- Validate with `curl` requests to confirm which version is serving traffic.  
+- Use **versioned image tags** (`blue`, `green`, `red`) for reproducibility.
+- Deploy **multiple versions side‑by‑side**.
+- Switch traffic by updating the Service selector.
+- Validate with `curl` requests to confirm which version is serving traffic.
 - The **red version** provides a safe way to simulate incidents (errors, latency) for observability and response training.
 
 Here’s an updated version of those README sections that reflects the **final state** we reached together — using top‑level kustomization, per‑component `kustomization.yaml`, and the initContainer + `envsubst` pattern for Prometheus. I’ve rewritten the flow so learners see exactly how ConfigMaps, `secretGenerator`, and replacements are used in practice:
@@ -700,7 +700,7 @@ We use ConfigMaps for **global values**, **Prometheus templates**, and **Grafana
   - Dashboards are stored as JSON files (`dashboard.json`) and turned into ConfigMaps with `configMapGenerator`.
   - Grafana’s sidecar loader imports any ConfigMap labeled `grafana_dashboard=1`.
 
-Teaching note:  
+Teaching note:
 > ConfigMaps are for non‑sensitive configuration. We keep them versioned in Git so learners can see exactly how values flow into workloads. Prometheus uses a template + initContainer to demonstrate preprocessing.
 
 ---
@@ -824,24 +824,24 @@ secretGenerator:
       - grafana/secret.env
 ```
 
-- **`secret.env`** is `.gitignored` so sensitive values never enter version control.  
-- Kustomize generates a Kubernetes Secret from this file at build time.  
+- **`secret.env`** is `.gitignored` so sensitive values never enter version control.
+- Kustomize generates a Kubernetes Secret from this file at build time.
 - Grafana and other components mount these secrets as environment variables.
 
-Teaching note:  
+Teaching note:
 > Secrets are generated from local files, not literals in Git. This models best practice: keep sensitive values out of source control but still reproducible in teaching labs.
 
 ---
 
 #### 🚀 Workflow
 
-1. Edit component manifests in their directories.  
-2. Update global values in the top‑level `kustomization.yaml`.  
+1. Edit component manifests in their directories.
+2. Update global values in the top‑level `kustomization.yaml`.
 3. Run:
    ```bash
    kubectl apply -k k8s/
    ```
-   This applies all resources, ConfigMaps, and Secrets in one shot.  
+   This applies all resources, ConfigMaps, and Secrets in one shot.
 4. Restart Deployments when ConfigMaps or Secrets change:
    ```bash
    kubectl rollout restart deployment prometheus -n observability
@@ -851,9 +851,9 @@ Teaching note:
 
 #### 🧭 Summary for Learners
 
-- **Kustomize**: Manages composition and substitutions across components.  
-- **ConfigMaps**: Store non‑sensitive configuration (targets, selectors, dashboards). Prometheus uses a template + initContainer for expansion.  
-- **Secrets**: Store sensitive values, generated from `.env` files.  
+- **Kustomize**: Manages composition and substitutions across components.
+- **ConfigMaps**: Store non‑sensitive configuration (targets, selectors, dashboards). Prometheus uses a template + initContainer for expansion.
+- **Secrets**: Store sensitive values, generated from `.env` files.
 - **Top‑Level Control**: All substitutions and generators live in the root `kustomization.yaml` for clarity and reproducibility.
 
 ---
@@ -1094,8 +1094,8 @@ grafana      ClusterIP    10.0.0.124     <none>          3000/TCP   2m
 demo-api     LoadBalancer 10.0.0.125     34.x.x.x        80/TCP     2m
 ```
 
-- **Prometheus** → `ClusterIP` (internal only)  
-- **Grafana** → `ClusterIP` (internal only)  
+- **Prometheus** → `ClusterIP` (internal only)
+- **Grafana** → `ClusterIP` (internal only)
 - **demo-api** → `LoadBalancer` (public IP for blue/green demo)
 
 If Prometheus or Grafana show `LoadBalancer` with an external IP, edit their Service manifests to use `ClusterIP`.
@@ -1111,7 +1111,7 @@ kubectl port-forward svc/prometheus 9090:9090 -n observability
 
 Open [http://localhost:9090](http://localhost:9090) in your browser.
 
-- Go to **Status → Targets** to confirm demo‑api endpoints are `UP`.  
+- Go to **Status → Targets** to confirm demo‑api endpoints are `UP`.
 - Run a simple query like `up` to verify metrics are being scraped.
 
 ---
@@ -1125,16 +1125,16 @@ kubectl port-forward svc/grafana 3000:3000 -n observability
 
 Open [http://localhost:3000](http://localhost:3000).
 
-- Default login: `admin / admin` (unless overridden).  
-- Go to **Configuration → Data Sources** and confirm Prometheus is connected.  
+- Default login: `admin / admin` (unless overridden).
+- Go to **Configuration → Data Sources** and confirm Prometheus is connected.
 - Import a sample dashboard to visualize metrics.
 
 ---
 
 #### 🧭 Best Practice
 
-- **Prometheus & Grafana**: keep internal (`ClusterIP`) and require port‑forwarding.  
-- **demo-api**: expose via `LoadBalancer` so learners can hit a public IP and see blue/green switching.  
+- **Prometheus & Grafana**: keep internal (`ClusterIP`) and require port‑forwarding.
+- **demo-api**: expose via `LoadBalancer` so learners can hit a public IP and see blue/green switching.
 - This separation models real‑world hygiene: observability tools are private, demo apps are public.
 
 ---
@@ -1170,10 +1170,10 @@ gcloud compute security-policies rules create 100 \
   --description="Rate limit: 10 RPS per IP, ban for 60s if exceeded"
 ```
 
-- `--rate-limit-threshold-count=10` → max 10 requests  
+- `--rate-limit-threshold-count=10` → max 10 requests
 - `--rate-limit-threshold-interval-sec=60` →  seconds
-- `--enforce-on-key=IP` → enforce per client IP  
-- `--ban-duration-sec=60` → ban for 60 seconds if exceeded  
+- `--enforce-on-key=IP` → enforce per client IP
+- `--ban-duration-sec=60` → ban for 60 seconds if exceeded
 - `--conform-action=allow` → requests under the threshold are allowed.
 - `--exceed-action="deny-429"` → requests over the threshold get HTTP 429 Too Many Requests.
 - `--action=rate-based-ban` + `--ban-duration-sec=60` → if a client repeatedly exceeds the threshold, they’re banned for 60 seconds.
@@ -1275,8 +1275,8 @@ You should see `demo-api-policy`.
 ---
 
 #### 🎉 Key Takeaways
-- Cloud Armor policies are created in GCP and bound to GKE backends via `BackendConfig`.  
-- Rate limiting rules throttle abusive clients before traffic reaches your pods.  
+- Cloud Armor policies are created in GCP and bound to GKE backends via `BackendConfig`.
+- Rate limiting rules throttle abusive clients before traffic reaches your pods.
 - This setup models production hygiene: observability tools stay internal, demo‑api is public but protected.
 
 ---
@@ -1286,7 +1286,7 @@ You should see `demo-api-policy`.
 ##### Diagram
 
 ```
-[ Client ] 
+[ Client ]
      │
      ▼
 [ Ingress IP (GCP LB Frontend) ]
@@ -1305,25 +1305,25 @@ You should see `demo-api-policy`.
 
 ##### Checklist
 
-- [x] **Ingress IP allocated**  
-  - Run `kubectl get ingress -n observability` → IP appears in `ADDRESS` column.  
+- [x] **Ingress IP allocated**
+  - Run `kubectl get ingress -n observability` → IP appears in `ADDRESS` column.
   - Example: `34.x.x.x`.
 
-- [x] **Backend service healthy**  
-  - In GCP Console → Network Services → Load Balancing → Backend services.  
+- [x] **Backend service healthy**
+  - In GCP Console → Network Services → Load Balancing → Backend services.
   - Endpoints show “Healthy”.
 
-- [x] **Cloud Armor policy attached**  
+- [x] **Cloud Armor policy attached**
   - Backend service shows `demo-api-policy` under “Security policy”.
 
-- [x] **Service port mapping correct**  
-  - Service spec: `port: 80 → targetPort: 5000`.  
+- [x] **Service port mapping correct**
+  - Service spec: `port: 80 → targetPort: 5000`.
   - App listens on port 5000.
 
-- [x] **App responds with 200 OK**  
+- [x] **App responds with 200 OK**
   - `curl http://<INGRESS_IP>/` returns `Hello from demo-api blue!`.
 
-- [x] **Debug pod confirms in-cluster routing**  
+- [x] **Debug pod confirms in-cluster routing**
   - `kubectl exec -it curlpod -n observability -- curl http://demo-api.observability.svc.cluster.local:80/` returns 200 OK.
 
 ---
@@ -1443,9 +1443,9 @@ spec:
 ---
 
 ### 🔹 How it works
-- Runs inside the cluster, hitting the `demo-api` service every second.  
-- Randomly chooses `/`, `/error`, or `/latency`.  
-- Generates traffic so Prometheus scrapes meaningful metrics.  
+- Runs inside the cluster, hitting the `demo-api` service every second.
+- Randomly chooses `/`, `/error`, or `/latency`.
+- Generates traffic so Prometheus scrapes meaningful metrics.
 - Learners can scale replicas up/down to simulate heavier load.
 
 ---

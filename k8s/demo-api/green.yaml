@@ -20,18 +20,18 @@ spec:
         environment: development
     spec:
       containers:
-      - name: demo-api
-        image: dannyanko/infra-demo-api:v3
-        env:
-        - name: VERSION
-          value: "green"
-        ports:
-        - containerPort: 5000
-        resources:
-          requests:
-            cpu: "200m"
-            memory: "512Mi"
-          limits:
-            cpu: "400m"
-            memory: "1Gi"
-        imagePullPolicy: Always
+        - name: demo-api
+          image: dannyanko/infra-demo-api:v3
+          env:
+            - name: VERSION
+              value: "green"
+          ports:
+            - containerPort: 5000
+          resources:
+            requests:
+              cpu: "200m"
+              memory: "512Mi"
+            limits:
+              cpu: "400m"
+              memory: "1Gi"
+          imagePullPolicy: Always

@@ -5,10 +5,10 @@ metadata:
   namespace: observability
 spec:
   containers:
-  - name: curlpod
-    image: curlimages/curl
-    command: ["sleep", "3600"]
-    resources:
-      requests:
-        cpu: "100m"
-        memory: "128Mi"
+    - name: curlpod
+      image: curlimages/curl
+      command: ["sleep", "3600"]
+      resources:
+        requests:
+          cpu: "100m"
+          memory: "128Mi"

@@ -11,7 +11,6 @@ groups:
         annotations:
           summary: "High error rate detected in demo-api"
           description: "More than 5 HTTP 500 errors per second for 1 minute. Investigate active version and traffic pattern."
-
       - alert: CrashLoopDetected
         expr: increase(kube_pod_container_status_restarts_total{pod=~"demo-api-.*"}[5m]) > 3
         for: 1m

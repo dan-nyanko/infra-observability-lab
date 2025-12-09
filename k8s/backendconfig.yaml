@@ -5,4 +5,4 @@ metadata:
   namespace: observability
 spec:
   securityPolicy:
-    name: demo-api-policy   # 👈 must match Cloud Armor policy name
+    name: demo-api-policy # 👈 must match Cloud Armor policy name
