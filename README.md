@@ -107,6 +107,70 @@ resource "google_container_cluster" "autopilot" {
 
 ### Prerequisites
 
+#### 🔧 Python Setup
+
+This repo uses Python‑based tooling for linting and pre‑commit hooks. To install the required packages:
+
+```bash
+pip install -r requirements.txt
+```
+
+- This installs **yamllint**, **pre‑commit**, and any other Python dependencies listed.
+- After installation, you can run:
+  ```bash
+  pre-commit install
+  ```
+  to enable hooks locally.
+- Then run:
+  ```bash
+  pre-commit run --all-files
+  ```
+  to check and format everything.
+
+---
+
+🧭 Teaching note:
+> “Adding this step ensures learners don’t hit missing‑tool errors. It makes the linting workflow reproducible and lowers setup friction.”
+
+---
+
+#### 🧹 Linting & Formatting
+
+This repo enforces YAML style and formatting automatically to keep manifests consistent and easy to read.
+
+- **Tools used**
+  - [yamllint](https://yamllint.readthedocs.io/) — checks YAML syntax and style rules.
+  - [Prettier](https://prettier.io/) — formats YAML consistently across editors.
+  - [pre‑commit](https://pre-commit.com/) — runs both tools automatically before commits.
+
+- **Style rules**
+  - Indentation is standardized to Prettier’s defaults (sequence items indented under their parent key).
+  - yamllint is configured with `indent-sequences: consistent` so it aligns with Prettier’s style.
+  - Both tools agree on spacing, quoting, and line breaks, so you won’t see “tug‑of‑war” changes.
+
+- **How to run checks**
+  ```bash
+  # Run linting/formatting on all files
+  pre-commit run --all-files
+  ```
+
+- **Workflow**
+  - On commit, pre‑commit will automatically run yamllint and Prettier.
+  - If yamllint finds issues, fix them before committing.
+  - If Prettier reformats files, just stage the changes and commit again.
+
+- **Why this matters**
+  - Consistent style reduces distractions for learners.
+  - Prettier ensures manifests look the same across editors.
+  - yamllint catches indentation or syntax errors early, before they reach `kubectl`.
+
+---
+
+🧭 Teaching note:
+> “This section reassures learners that linting errors aren’t about validity of Kubernetes manifests, but about style consistency. It also shows them how to run and trust the tooling rather than fight it.”
+
+---
+
 #### Install Terraform (macOS)
 
 ```bash
