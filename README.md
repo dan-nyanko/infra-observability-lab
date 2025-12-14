@@ -371,6 +371,91 @@ After provisioning the GKE cluster with Terraform, you may see warnings in the C
 
 ---
 
+### 🚀 GitHub Actions + Google Cloud Workload Identity Federation (WIF)
+
+This repository uses **GitHub Actions** to run Terraform against Google Cloud.
+Authentication is handled via **Workload Identity Federation (WIF)**, which allows GitHub’s OIDC tokens to be exchanged for short‑lived Google Cloud credentials — eliminating the need for long‑lived JSON keys.
+
+#### 🔧 How it works
+1. GitHub Actions jobs request an **OIDC token** from GitHub.
+2. Google Cloud’s **Workload Identity Pool Provider** validates the token (issuer, audience, repo, branch).
+3. The provider allows impersonation of a **service account** (e.g. `terraform-sa@PROJECT_ID.iam.gserviceaccount.com`).
+4. Terraform uses that service account to access GCP resources securely.
+
+---
+
+#### ✅ Steps to enable WIF on GCP
+
+1. **Enable required APIs**
+   ```bash
+   gcloud services enable iam.googleapis.com \
+       cloudresourcemanager.googleapis.com \
+       sts.googleapis.com
+   ```
+   (Add `container.googleapis.com`, `storage.googleapis.com`, etc. if Terraform manages GKE or GCS.)
+
+2. **Create a Workload Identity Pool**
+   ```bash
+   gcloud iam workload-identity-pools create github-pool \
+     --project=$PROJECT_ID \
+     --location=global \
+     --display-name="GitHub Pool"
+   ```
+
+3. **Create a Provider for GitHub OIDC**
+   ```bash
+   gcloud iam workload-identity-pools providers create-oidc github-provider \
+     --project=$PROJECT_ID \
+     --location=global \
+     --workload-identity-pool=github-pool \
+     --display-name="GitHub Provider" \
+     --issuer-uri="https://token.actions.githubusercontent.com" \
+     --attribute-condition="attribute.repository=='YOUR_ORG/YOUR_REPO' && attribute.ref=='refs/heads/main'" \
+     --attribute-mapping="google.subject=assertion.sub,attribute.actor=assertion.actor,attribute.repository=assertion.repository,attribute.ref=assertion.ref" \
+     --allowed-audiences="https://github.com/"
+   ```
+
+4. **Create a Service Account**
+   ```bash
+   gcloud iam service-accounts create terraform-sa \
+     --project=$PROJECT_ID \
+     --display-name="Terraform Service Account"
+   ```
+
+5. **Grant IAM roles to the Service Account**
+   - Example roles:
+     - `roles/storage.objectAdmin` (for GCS state bucket)
+     - `roles/container.admin` (for GKE clusters)
+     - `roles/iam.workloadIdentityUser` (to allow WIF impersonation)
+   ```bash
+   gcloud projects add-iam-policy-binding $PROJECT_ID \
+     --member="serviceAccount:terraform-sa@$PROJECT_ID.iam.gserviceaccount.com" \
+     --role="roles/iam.workloadIdentityUser"
+   ```
+
+6. **Update GitHub Actions workflow**
+   ```yaml
+   permissions:
+     id-token: write
+     contents: read
+
+   - name: Authenticate to Google Cloud
+     uses: google-github-actions/auth@v2
+     with:
+       workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+       service_account: terraform-sa@PROJECT_ID.iam.gserviceaccount.com
+       audience: https://github.com/
+   ```
+
+---
+
+#### 🧭 Notes
+- Replace `PROJECT_ID` and `PROJECT_NUMBER` with your actual values.
+- The `attributeCondition` ensures only tokens from your repo/branch can impersonate the service account.
+- No JSON keys are stored in GitHub — authentication is fully keyless and short‑lived.
+
+---
+
 ### 📦 infra-demo-api
 
 `infra-demo-api` is a lightweight demo service used to illustrate blue/green deployments, observability, and incident simulation. It exposes a simple HTTP endpoint that responds with a version string, making it easy to visualize traffic shifts in Prometheus and Grafana.
