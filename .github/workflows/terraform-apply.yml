@@ -11,9 +11,6 @@ jobs:
   terraform-apply:
     runs-on: ubuntu-latest
 
-    env:
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ secrets.GCP_TF_KEY }}
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
