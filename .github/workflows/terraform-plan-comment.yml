@@ -36,7 +36,10 @@ jobs:
         working-directory: terraform
 
       - name: Write tfvars
-        run: printf "%s" "${{ secrets.TFVARS }}" > terraform.tfvars
+        run: |
+          cat > terraform.tfvars <<'EOF'
+          ${{ secrets.TFVARS }}
+          EOF
         working-directory: terraform
 
       - name: Terraform Plan
