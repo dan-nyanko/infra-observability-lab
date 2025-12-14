@@ -456,6 +456,84 @@ Authentication is handled via **Workload Identity Federation (WIF)**, which allo
 
 ---
 
+### 🛠️ Troubleshooting GitHub Actions + GCP WIF
+
+Even with Workload Identity Federation configured, you may encounter errors during `terraform plan` or `apply`. Below are the most common issues and their resolutions.
+
+#### 1. **403: Permission denied to list services**
+```
+Error: Failed to list enabled services for project ...
+```
+**Cause:** The service account lacks Service Usage roles.
+**Fix:** Grant `roles/serviceusage.serviceUsageConsumer` (read) and optionally `roles/serviceusage.serviceUsageAdmin` (enable/disable APIs).
+
+---
+
+#### 2. **403: Required `container.clusters.get` permission**
+```
+Error: Required "container.clusters.get" permission(s) ...
+```
+**Cause:** Missing GKE/Compute permissions.
+**Fix:** Grant `roles/container.admin` and `roles/compute.viewer` to the service account.
+
+---
+
+#### 3. **403: Permission `iam.workloadIdentityPools.get` denied**
+```
+Error: Permission 'iam.workloadIdentityPools.get' denied ...
+```
+**Cause:** Service account cannot manage Workload Identity Pools.
+**Fix:** Grant `roles/iam.workloadIdentityPoolAdmin`.
+
+---
+
+#### 4. **Cloud Resource Manager API disabled**
+```
+Error: Cloud Resource Manager API has not been used in project ...
+```
+**Cause:** Required APIs not enabled.
+**Fix:** Enable APIs:
+```bash
+gcloud services enable cloudresourcemanager.googleapis.com iam.googleapis.com sts.googleapis.com
+```
+
+---
+
+#### 5. **Variables not allowed in `terraform.tfvars`**
+```
+Error: Variables may not be used here ...
+```
+**Cause:** CI mangled the `tfvars` file when writing from secrets.
+**Fix:** Use a heredoc in your workflow:
+```yaml
+- name: Write tfvars
+  working-directory: terraform
+  run: |
+    cat <<'EOF' > terraform.tfvars
+    ${{ secrets.TFVARS }}
+    EOF
+```
+
+---
+
+#### 6. **403 on GCS bucket access**
+```
+Error: terraform-sa does not have storage.objects.list access ...
+```
+**Cause:** Service account lacks bucket permissions.
+**Fix:** Grant `roles/storage.objectAdmin` on the state bucket.
+
+---
+
+### 🧭 Notes
+- IAM changes can take a few minutes to propagate.
+- Always confirm your `workload_identity_provider` string matches the exact GCP resource name.
+- Use `audience: https://github.com/` in your workflow to match GitHub’s OIDC token.
+
+---
+
+---
+
 ### 📦 infra-demo-api
 
 `infra-demo-api` is a lightweight demo service used to illustrate blue/green deployments, observability, and incident simulation. It exposes a simple HTTP endpoint that responds with a version string, making it easy to visualize traffic shifts in Prometheus and Grafana.
