@@ -36,6 +36,11 @@ resource "kubernetes_deployment_v1" "demo_api_blue" {
             container_port = var.container_port
           }
 
+          env {
+            name  = "VERSION"
+            value = "blue"
+          }
+
           resources {
             requests = {
               cpu    = "200m"
@@ -109,6 +114,11 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
             container_port = var.container_port
           }
 
+          env {
+            name  = "VERSION"
+            value = "green"
+          }
+
           resources {
             requests = {
               cpu    = "200m"
@@ -179,6 +189,11 @@ resource "kubernetes_deployment_v1" "demo_api_red" {
 
           port {
             container_port = var.container_port
+          }
+
+          env {
+            name  = "VERSION"
+            value = "red"
           }
 
           resources {
