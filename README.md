@@ -1615,7 +1615,7 @@ spec:
 
 #### Grafana `demo-api` Dashboard (before)
 
-![Grafana Dashboard Before](demo-api-dashboard-befor.png)
+![Grafana Dashboard Before](demo-api-dashboard-before.png)
 
 Before incident simulation:
 Demo‑API running clean (blue variant). Request rate and latency are stable. No 500s, pod restarts, or active alerts.
