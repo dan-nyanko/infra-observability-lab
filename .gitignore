@@ -3,7 +3,7 @@
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
-terraform.tfvars
+*.tfvars
 
 # GCP service account keys
 *key.json
