@@ -1,0 +1,47 @@
+name: Demo API Drills
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Choose drill mode: incident or rollback"
+        required: true
+        default: "incident"
+        type: choice
+        options:
+          - incident
+          - rollback
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: terraform/demo-api
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ secrets.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: terraform-sa@${{ secrets.PROJECT_ID }}.iam.gserviceaccount.com
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          if [ "${{ github.event.inputs.mode }}" = "incident" ]; then
+            terraform apply -auto-approve -var-file=incident.tfvars
+          else
+            terraform apply -auto-approve -var-file=terraform.tfvars
+          fi
