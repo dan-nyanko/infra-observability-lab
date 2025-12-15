@@ -76,5 +76,18 @@ def metrics():
     return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
 
+@app.route("/healthz")
+def healthz():
+    # Simple liveness check: if process is running, return 200
+    return "OK", 200
+
+
+@app.route("/readyz")
+def readyz():
+    # Readiness check: you can add logic here if needed
+    # For example, check DB connection, cache warmup, etc.
+    return "Ready", 200
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
