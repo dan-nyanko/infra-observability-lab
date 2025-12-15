@@ -613,7 +613,7 @@ To ensure compatibility across both `amd64` and `arm64` nodes, use Docker Buildx
 
 ```bash
 docker buildx build --platform linux/amd64,linux/arm64 \
-  -t dannyanko/infra-demo-api:<version>. \
+  -t dannyanko/infra-demo-api:<version> . \
   --push \
   --provenance=false --sbom=false
 ```
@@ -783,20 +783,6 @@ Apply the Service:
 kubectl apply -f demo-api-service.yaml -n observability
 ```
 
-To switch traffic, edit the Service selector:
-
-```yaml
-selector:
-  app: demo-api
-  version: red
-```
-
-Re‑apply:
-
-```bash
-kubectl apply -f demo-api-service.yaml -n observability
-```
-
 ---
 
 #### 🌐 Accessing via LoadBalancer Public IP
@@ -827,7 +813,7 @@ kubectl apply -f demo-api-service.yaml -n observability
 
 ---
 
-### 🔍 Get the Public IP
+#### 🔍 Get the Public IP
 
 Run:
 
@@ -870,26 +856,6 @@ curl http://34.x.x.x/
 - When the Service selector points to `version: blue`, responses come from the blue deployment.
 - When switched to `version: green`, responses come from the green deployment.
 - When switched to `version: red`, responses come from the red deployment — including simulated error and latency routes for incident practice.
-
----
-
-### ⏱️ Switching Traffic
-
-Edit the Service selector:
-
-```yaml
-selector:
-  app: demo-api
-  version: red
-```
-
-Re‑apply:
-
-```bash
-kubectl apply -f demo-api-service.yaml -n observability
-```
-
-Within seconds (once red pods are `Ready`), requests to the LoadBalancer IP will start returning red responses.
 
 ---
 
@@ -1026,7 +992,7 @@ replacements:
 
 ---
 
-## 🔹 What Happens
+#### 🔹 What Happens
 - The `prometheus-config-template` ConfigMap holds the scrape config with `${PROMETHEUS_TARGET}`.
 - The Prometheus Deployment’s initContainer runs `envsubst`, expanding `${PROMETHEUS_TARGET}` into a concrete hostname:port.
 - The rendered file is written into a shared `emptyDir` volume, which the Prometheus container mounts at `/etc/prometheus`.
@@ -1226,7 +1192,7 @@ datasources:
 
 Each panel in `demo-api-dashboard.json` should reference this datasource:
 
-yaml```
+```yaml
 "datasource": {
   "type": "prometheus",
   "uid": "prometheus"
@@ -1235,11 +1201,12 @@ yaml```
 
 ---
 
-### 🔐 Debugging Kubernetes Secrets
+#### 🔐 Debugging Kubernetes Secrets
 
 Secrets are critical for storing credentials (like Grafana’s admin password). If they’re mis‑applied or left empty, pods may fail to start correctly or you won’t be able to log in. Here’s how to debug and fix them.
 
-#### 1. Inspect the Secret
+##### 1. Inspect the Secret
+
 Check if the secret exists and what keys it contains:
 ```bash
 kubectl get secret grafana-admin-secret -n observability
@@ -1257,14 +1224,14 @@ kubectl get secret grafana-admin-secret -n observability \
 
 ---
 
-#### 2. Common Issues
+##### 2. Common Issues
 - **Empty values (0 bytes):** Usually caused by skipping `envsubst` when applying manifests with placeholders.
 - **Wrong key names:** Grafana expects `GF_SECURITY_ADMIN_PASSWORD`.
 - **Pod not restarted:** Even after fixing the secret, the Grafana pod may still be using the old value.
 
 ---
 
-#### 3. Fixing a Broken Secret
+##### 3. Fixing a Broken Secret
 Delete the bad secret:
 ```bash
 kubectl delete secret grafana-admin-secret -n observability
@@ -1289,7 +1256,7 @@ kubectl delete pod -l app=grafana -n observability
 
 ---
 
-#### 4. Best Practices
+##### 4. Best Practices
 - Always run manifests with placeholders through `envsubst`:
   ```bash
   export GRAFANA_PASSWORD=changeme
@@ -1596,30 +1563,7 @@ We deploy a `traffic-gen` pod that continuously hits the demo-api service. This 
 
 #### 🐍 Python Traffic Generator Script
 
-```python
-import os
-import time
-import random
-import requests
-
-SERVICE_URL = os.getenv("SERVICE_URL", "http://demo-api.observability.svc.cluster.local")
-INTERVAL = float(os.getenv("INTERVAL", "1.0"))  # seconds between requests
-
-def main():
-    while True:
-        # Randomly choose a route to hit
-        route = random.choice(["/", "/error", "/latency"])
-        url = f"{SERVICE_URL}{route}"
-        try:
-            resp = requests.get(url, timeout=5)
-            print(f"Hit {url} -> {resp.status_code}")
-        except Exception as e:
-            print(f"Request failed: {e}")
-        time.sleep(INTERVAL)
-
-if __name__ == "__main__":
-    main()
-```
+TODO write a summary of source code at `traffic-gen/traffic_gen.py`
 
 ---
 
@@ -1669,11 +1613,85 @@ spec:
 
 ---
 
-### 🔹 How it works
+#### Grafana `demo-api` Dashboard (before)
+
+![Grafana Dashboard Before](demo-api-dashboard-befor.png)
+
+Before incident simulation:
+Demo‑API running clean (blue variant). Request rate and latency are stable. No 500s, pod restarts, or active alerts.
+
+#### Switch Service to Red
+
+TODO
+
+---
+
+#### 🔹 How it works
 - Runs inside the cluster, hitting the `demo-api` service every second.
 - Randomly chooses `/`, `/error`, or `/latency`.
 - Generates traffic so Prometheus scrapes meaningful metrics.
 - Learners can scale replicas up/down to simulate heavier load.
+
+---
+
+### 📊 Incident Simulation Reporting
+
+Once you've switched the `demo-api` service to the `red` variant, observe how the system responds through Grafana and Prometheus. Use the following template to document the incident and guide learners through structured analysis.
+
+---
+
+#### 🧭 Incident Summary
+
+| Field            | Description                                      |
+|------------------|--------------------------------------------------|
+| Service Impacted | `demo-api`                                       |
+| Variant          | `red`                                            |
+| Start Time       | `YYYY-MM-DD HH:MM` (local or UTC)                |
+| End Time         | `YYYY-MM-DD HH:MM` (when system returned to green) |
+| Trigger Method   | Manual switch via `kubectl apply`                |
+| Traffic Source   | `traffic-gen` pod                                |
+
+---
+
+#### 🔍 Detection
+
+- Which alerts fired?
+- What did Grafana dashboards show (error rate, latency, pod restarts)?
+- Did Prometheus targets remain healthy?
+
+**Screenshot: Grafana dashboard during incident**
+
+![Grafana Dashboard After](demo-api-dashboard-after.png)
+
+---
+
+#### 🛠️ Response Actions
+
+- What steps did you take to investigate?
+- Did you check logs, metrics, or pod status?
+- Was any mitigation applied (rollback, scaling, config change)?
+
+---
+
+#### ✅ Resolution
+
+- How did the system return to green?
+- Did alerts clear automatically?
+- Was manual intervention required?
+
+---
+
+#### 📚 Lessons Learned
+
+- Did alerts fire as expected?
+- Were dashboards clear and actionable?
+- Any gaps in observability or documentation?
+- Suggestions for improving the simulation or tooling?
+
+---
+
+🧭 Teaching note:
+> “This template helps learners practice structured incident response. It reinforces observability fundamentals — detection, diagnosis, resolution — and builds muscle memory for real-world postmortems.”
 
 ---
 
