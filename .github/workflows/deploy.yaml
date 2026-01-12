@@ -1,0 +1,64 @@
+name: CI/CD Demo API
+
+on:
+  push:
+    branches: ["main"] # run pipeline when code is pushed to main
+    paths:
+      - "demo_api/**/*.py"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/
+
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push multi-arch image
+        run: |
+          IMAGE=dannyanko/demo-api
+          TAG=v${{ github.run_number }}
+          docker buildx build --platform linux/amd64,linux/arm64 \
+            -t $IMAGE:$TAG -t $IMAGE:latest \
+            --push .
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve \
+          -var="demo_api_image_blue=dannyanko/demo-api:v${{ github.run_number }}" \
+          -var="demo_api_image_green=dannyanko/demo-api:v${{ github.run_number }}" \
+          -var="demo_api_image_red=dannyanko/demo-api:v${{ github.run_number }}"

@@ -52,7 +52,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 | Module                | Purpose                                                                 |
 |-----------------------|-------------------------------------------------------------------------|
 | `.github/workflows/`  | GitHub Actions pipelines for linting, testing, image build/push, and cluster deploy |
-| `demo-api`            | Python code and Dockerfile for Blue, Green, and Red flask apps |
+| `demo_api`            | Python code and Dockerfile for Blue, Green, and Red flask apps |
 | `k8s/`                | Kubernetes manifests for workloads and observability stack (Prometheus, Grafana). Uses kustomization |
 | `terraform/`          | Infrastructure-as-code to provision the GKE Autopilot cluster and base networking |
 | `terraform/demo-api`  | Terraform module that deploys the demo-api workloads (blue/green/red), Services, and supporting Kubernetes resources |
