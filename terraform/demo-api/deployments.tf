@@ -33,6 +33,7 @@ resource "kubernetes_deployment_v1" "demo_api_blue" {
           image = var.demo_api_image_blue
 
           port {
+            name           = "metrics"
             container_port = var.container_port
           }
 
@@ -111,6 +112,7 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
           image = var.demo_api_image_green
 
           port {
+            name           = "metrics"
             container_port = var.container_port
           }
 
@@ -188,6 +190,7 @@ resource "kubernetes_deployment_v1" "demo_api_red" {
           image = var.demo_api_image_red
 
           port {
+            name           = "metrics"
             container_port = var.container_port
           }
 

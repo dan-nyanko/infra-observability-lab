@@ -16,6 +16,7 @@ spec:
         app: prometheus
         environment: development
     spec:
+      serviceAccountName: prometheus-server
       initContainers:
         - name: init-prometheus-data
           image: busybox

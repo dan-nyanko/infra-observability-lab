@@ -25,7 +25,7 @@
       "targets": [
         {
           "expr": "rate(http_requests_total{status=\"500\"}[1m])",
-          "legendFormat": "{{pod}}"
+          "legendFormat": "{{version}}"
         }
       ],
       "title": "Error Rate (500s)",
@@ -99,11 +99,26 @@
       "id": 7,
       "targets": [
         {
-          "expr": "container_memory_working_set_bytes",
-          "legendFormat": "{{pod}}"
+          "expr": "sum(process_resident_memory_bytes{job=\"demo-api\"})",
+          "legendFormat": "Total"
         }
       ],
       "title": "Memory Usage",
+      "type": "graph"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "id": 8,
+      "targets": [
+        {
+          "expr": "sum by (version) (process_resident_memory_bytes{job=\"demo-api\"})",
+          "legendFormat": "{{version}}"
+        }
+      ],
+      "title": "Memory Usage by Version",
       "type": "graph"
     },
     {

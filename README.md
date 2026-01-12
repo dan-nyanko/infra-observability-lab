@@ -21,7 +21,7 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 ---
 
 #### 🏗️ Architecture
-- **demo‑api**: A simple application exposed via `LoadBalancer` + Ingress for blue/green switching.
+- **demo‑api**: A simple application exposed via `LoadBalancer` + Ingress for blue/green switching and incident simulation.
 - **Prometheus**: Internal (`ClusterIP`), accessed via port‑forwarding, scrapes demo‑api metrics.
 - **Grafana**: Internal (`ClusterIP`), accessed via port‑forwarding, visualizes Prometheus data.
 - **Cloud Armor**: Protects demo‑api ingress with rate limiting and IP rules.
@@ -31,21 +31,17 @@ This lab is designed as a **teaching artifact** for Kubernetes learners. It mode
 ---
 
 #### 🔑 Key Teaching Moments
-- **Service DNS alignment**: Prometheus scrapes `demo-api.observability.svc.cluster.local`; mismatches cause `no such host`.
+- **Service DNS alignment**: Prometheus scrapes `demo-api.observability.svc.cluster.local`
 - **Port‑forwarding vs public IPs**: Observability tools stay private; demo‑api is public.
 - **Blue/green deployments**: Learners inspect Service selectors and curl responses to see which version is active.
 - **Security at the edge**: Cloud Armor policies throttle abusive traffic before it reaches pods.
 - **Troubleshooting flow**: Learners practice fixing namespace errors, DNS mismatches, and scrape failures.
-
-#### 🚀 Next Steps
-- Pivot toward **Terraform‑driven Infrastructure as Code** for reproducibility and GitOps workflows.
 
 ---
 
 ### Architecture
 
 ![Architecture Diagram](architecture.png)
-TODO
 
 *A GCP-hosted GKE Autopilot cluster runs Prometheus and Grafana. Metrics are collected from simulated workloads and exposed via exporters. Alerts trigger based on thresholds, and incident simulations validate recovery paths.*
 
@@ -55,11 +51,12 @@ TODO
 
 | Module                | Purpose                                                                 |
 |-----------------------|-------------------------------------------------------------------------|
-| `terraform/`          | Infrastructure-as-code to provision the GKE Autopilot cluster and base networking |
-| `k8s/`                | Kubernetes manifests for workloads and observability stack (Prometheus, Grafana, infra-demo-api) |
-| `incidents/`          | Simulation scripts (Bash/Python) to trigger stress scenarios: CPU spikes, memory leaks, disk fill |
 | `.github/workflows/`  | GitHub Actions pipelines for linting, testing, image build/push, and cluster deploy |
-| `dashboards/`         | Grafana dashboard JSON templates for visualizing metrics and incident impact |
+| `demo-api`            | Python code and Dockerfile for Blue, Green, and Red flask apps |
+| `k8s/`                | Kubernetes manifests for workloads and observability stack (Prometheus, Grafana). Uses kustomization |
+| `terraform/`          | Infrastructure-as-code to provision the GKE Autopilot cluster and base networking |
+| `terraform/demo-api`  | Terraform module that deploys the demo-api workloads (blue/green/red), Services, and supporting Kubernetes resources |
+| `traffic-gen`         | Lightweight Python traffic generator that sends good, error, and crash traffic patterns to the demo-api service for observability testing |
 | `architecture.png`    | System diagram showing cluster flow, observability, and CI/CD integration |
 | `README.md`           | Entry point documentation, reliability framing, and demo instructions |
 
@@ -902,8 +899,6 @@ Teaching note:
 ```
 k8s/
 ├── kustomization.yaml        # top-level
-├── demo-api/
-│   └── kustomization.yaml
 ├── prometheus/
 │   ├── kustomization.yaml
 │   └── prometheus.yml.template
@@ -1793,3 +1788,168 @@ k explain pod.spec.containers
 - [Grafana](https://grafana.com/)
 - [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest)
 - TODO
+
+---
+
+## 📦 Terraform Module: `project-iam-binding`
+
+**Module structure:**
+
+```
+modules/
+  project-iam-binding/
+    main.tf
+    variables.tf
+    outputs.tf
+```
+
+---
+
+### `variables.tf`
+
+```hcl
+variable "project_id" {
+  description = "The GCP project ID where IAM bindings will be applied"
+  type        = string
+}
+
+variable "service_account_email" {
+  description = "Service account email to bind roles to"
+  type        = string
+}
+
+variable "roles" {
+  description = "List of IAM roles to bind to the service account"
+  type        = list(string)
+}
+```
+
+---
+
+### `main.tf`
+
+```hcl
+resource "google_project_iam_binding" "bindings" {
+  for_each = toset(var.roles)
+
+  project = var.project_id
+  role    = each.value
+
+  members = [
+    "serviceAccount:${var.service_account_email}"
+  ]
+}
+```
+
+---
+
+### `outputs.tf`
+
+```hcl
+output "bindings" {
+  description = "IAM bindings applied to the service account"
+  value       = google_project_iam_binding.bindings
+}
+```
+
+---
+
+## 🔧 Example Usage
+
+In your root module:
+
+```hcl
+module "terraform_sa_bindings" {
+  source                = "./modules/project-iam-binding"
+  project_id            = "infra-observability-lab"
+  service_account_email = "terraform-sa@infra-observability-lab.iam.gserviceaccount.com"
+
+  roles = [
+    "roles/serviceusage.serviceUsageConsumer",
+    "roles/serviceusage.serviceUsageAdmin",
+    "roles/container.admin",
+    "roles/compute.viewer",
+    "roles/iam.workloadIdentityUser"
+  ]
+}
+```
+
+---
+
+## 🧭 Teaching note
+> “This module abstracts IAM binding logic. You pass in the project ID, service account email, and a list of roles. Terraform loops through them and applies bindings consistently.”
+
+Absolutely, Dan — here’s a clear and concise `README.md` that documents the Prometheus discovery fix and the Terraform changes you made to support dynamic scraping of `demo-api` Pods by version:
+
+---
+
+### Prometheus Pod Discovery Fix for `demo-api`
+
+#### ✅ Summary of Changes
+
+##### 1. **Prometheus Configuration**
+- Enabled dynamic Pod discovery via `kubernetes_sd_configs`:
+  ```yaml
+  scrape_configs:
+    - job_name: demo-api
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: demo-api
+        - source_labels: [__meta_kubernetes_pod_label_version]
+          target_label: version
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          action: keep
+          regex: metrics
+  ```
+- Removed static scrape target `${PROMETHEUS_TARGET}` to rely fully on dynamic discovery.
+
+---
+
+##### 2. **Terraform Deployment Updates**
+- Added `name = "metrics"` to the container port block in all `demo-api` Deployments:
+  ```hcl
+  port {
+    name           = "metrics"
+    container_port = var.container_port
+  }
+  ```
+- This ensures Prometheus matches the relabel rule filtering for ports named `metrics`.
+
+---
+
+##### 3. **RBAC Fix**
+- Verified Prometheus uses the correct ServiceAccount (`prometheus-server`) via:
+  ```yaml
+  serviceAccountName: prometheus-server
+  ```
+- Created missing ServiceAccount in the `observability` namespace:
+  ```yaml
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: prometheus-server
+    namespace: observability
+  ```
+- Confirmed ClusterRoleBinding ties `prometheus-server` ServiceAccount to the `prometheus-server` ClusterRole with `get/list/watch` permissions on Pods.
+
+---
+
+#### 🔍 Verification Steps
+
+- Prometheus UI → *Status → Targets* now shows all `demo-api` Pods as `UP`, with correct `version` labels.
+- Grafana dashboards using:
+  ```promql
+  sum by (version) (process_resident_memory_bytes{job="demo-api"})
+  ```
+  now show distinct memory usage lines for blue/green/red.
+
+---
+
+#### 🧭 Teaching Note
+
+> “Prometheus service discovery depends on Kubernetes metadata and RBAC. Port naming and relabeling must align, and the ServiceAccount must be authorized to list Pods.”
+
+---
