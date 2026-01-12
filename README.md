@@ -453,11 +453,11 @@ Authentication is handled via **Workload Identity Federation (WIF)**, which allo
 
 ---
 
-### 🛠️ Troubleshooting GitHub Actions + GCP WIF
+#### 🛠️ Troubleshooting GitHub Actions + GCP WIF
 
 Even with Workload Identity Federation configured, you may encounter errors during `terraform plan` or `apply`. Below are the most common issues and their resolutions.
 
-#### 1. **403: Permission denied to list services**
+##### 1. **403: Permission denied to list services**
 ```
 Error: Failed to list enabled services for project ...
 ```
@@ -466,7 +466,7 @@ Error: Failed to list enabled services for project ...
 
 ---
 
-#### 2. **403: Required `container.clusters.get` permission**
+##### 2. **403: Required `container.clusters.get` permission**
 ```
 Error: Required "container.clusters.get" permission(s) ...
 ```
@@ -475,7 +475,7 @@ Error: Required "container.clusters.get" permission(s) ...
 
 ---
 
-#### 3. **403: Permission `iam.workloadIdentityPools.get` denied**
+##### 3. **403: Permission `iam.workloadIdentityPools.get` denied**
 ```
 Error: Permission 'iam.workloadIdentityPools.get' denied ...
 ```
@@ -484,7 +484,7 @@ Error: Permission 'iam.workloadIdentityPools.get' denied ...
 
 ---
 
-#### 4. **Cloud Resource Manager API disabled**
+##### 4. **Cloud Resource Manager API disabled**
 ```
 Error: Cloud Resource Manager API has not been used in project ...
 ```
@@ -496,7 +496,7 @@ gcloud services enable cloudresourcemanager.googleapis.com iam.googleapis.com st
 
 ---
 
-#### 5. **Variables not allowed in `terraform.tfvars`**
+##### 5. **Variables not allowed in `terraform.tfvars`**
 ```
 Error: Variables may not be used here ...
 ```
@@ -513,7 +513,7 @@ Error: Variables may not be used here ...
 
 ---
 
-#### 6. **403 on GCS bucket access**
+##### 6. **403 on GCS bucket access**
 ```
 Error: terraform-sa does not have storage.objects.list access ...
 ```
@@ -522,7 +522,7 @@ Error: terraform-sa does not have storage.objects.list access ...
 
 ---
 
-### 🧭 Notes
+#### 🧭 Notes
 - IAM changes can take a few minutes to propagate.
 - Always confirm your `workload_identity_provider` string matches the exact GCP resource name.
 - Use `audience: https://github.com/` in your workflow to match GitHub’s OIDC token.
