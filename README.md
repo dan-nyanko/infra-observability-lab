@@ -531,9 +531,9 @@ Error: terraform-sa does not have storage.objects.list access ...
 
 ---
 
-### 📦 infra-demo-api
+### 📦 demo-api
 
-`infra-demo-api` is a lightweight demo service used to illustrate blue/green deployments, observability, and incident simulation. It exposes a simple HTTP endpoint that responds with a version string, making it easy to visualize traffic shifts in Prometheus and Grafana.
+`demo-api` is a lightweight demo service used to illustrate blue/green deployments, observability, and incident simulation. It exposes a simple HTTP endpoint that responds with a version string, making it easy to visualize traffic shifts in Prometheus and Grafana.
 
 #### 🔍 Features
 - Minimal Flask/Express-style API returning `Hello from demo-api <VERSION>!`
@@ -1165,6 +1165,77 @@ groups:
 
 ---
 
+### Prometheus Pod Discovery Fix for `demo-api`
+
+#### ✅ Summary of Changes
+
+##### 1. **Prometheus Configuration**
+- Enabled dynamic Pod discovery via `kubernetes_sd_configs`:
+  ```yaml
+  scrape_configs:
+    - job_name: demo-api
+      kubernetes_sd_configs:
+        - role: pod
+      relabel_configs:
+        - source_labels: [__meta_kubernetes_pod_label_app]
+          action: keep
+          regex: demo-api
+        - source_labels: [__meta_kubernetes_pod_label_version]
+          target_label: version
+        - source_labels: [__meta_kubernetes_pod_container_port_name]
+          action: keep
+          regex: metrics
+  ```
+- Removed static scrape target `${PROMETHEUS_TARGET}` to rely fully on dynamic discovery.
+
+---
+
+##### 2. **Terraform Deployment Updates**
+- Added `name = "metrics"` to the container port block in all `demo-api` Deployments:
+  ```hcl
+  port {
+    name           = "metrics"
+    container_port = var.container_port
+  }
+  ```
+- This ensures Prometheus matches the relabel rule filtering for ports named `metrics`.
+
+---
+
+##### 3. **RBAC Fix**
+- Verified Prometheus uses the correct ServiceAccount (`prometheus-server`) via:
+  ```yaml
+  serviceAccountName: prometheus-server
+  ```
+- Created missing ServiceAccount in the `observability` namespace:
+  ```yaml
+  apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    name: prometheus-server
+    namespace: observability
+  ```
+- Confirmed ClusterRoleBinding ties `prometheus-server` ServiceAccount to the `prometheus-server` ClusterRole with `get/list/watch` permissions on Pods.
+
+---
+
+#### 🔍 Verification Steps
+
+- Prometheus UI → *Status → Targets* now shows all `demo-api` Pods as `UP`, with correct `version` labels.
+- Grafana dashboards using:
+  ```promql
+  sum by (version) (process_resident_memory_bytes{job="demo-api"})
+  ```
+  now show distinct memory usage lines for blue/green/red.
+
+---
+
+#### 🧭 Teaching Note
+
+> “Prometheus service discovery depends on Kubernetes metadata and RBAC. Port naming and relabeling must align, and the ServiceAccount must be authorized to list Pods.”
+
+---
+
 ### Grafana
 
 Grafana requires an admin password. For security, we don’t commit real secrets into Git. Instead, we use `secretGenerator` with a `.gitignored` `secret.env` file. Grafana mounts the generated Secret as environment variables.
@@ -1552,7 +1623,7 @@ kubectl exec -it curlpod -n observability -- curl -v http://demo-api.observabili
 
 ### Run Incident Simulation
 
-We deploy a `traffic-gen` pod that continuously hits the demo-api service. This generates synthetic traffic, including errors and latency, so Prometheus and Grafana dashboards show realistic incident patterns.”
+We deploy a `traffic-gen` pod that continuously hits the demo-api service. This generates synthetic traffic, and including errors and latency when the red serice it deployed. This will show realistic incident patterns.”
 
 ---
 
@@ -1687,269 +1758,3 @@ Once you've switched the `demo-api` service to the `red` variant, observe how th
 
 🧭 Teaching note:
 > “This template helps learners practice structured incident response. It reinforces observability fundamentals — detection, diagnosis, resolution — and builds muscle memory for real-world postmortems.”
-
----
-
-### Reliability Principles
-
-This lab reinforces:
-- TODO
-
----
-
-### 🧑‍💻 Kubernetes CLI Efficiency for CKA Prep
-
-This lab emphasizes **real `kubectl` usage** (no GUIs or wrappers) while adding small efficiency boosts that reduce typing errors and speed up workflows. These practices are exam‑safe and build muscle memory for the CKA.
-
----
-
-#### 🔹 Shell Autocompletion
-Enable tab‑completion for resource types, names, and flags:
-
-```bash
-# Bash
-source <(kubectl completion bash)
-
-# Zsh
-source <(kubectl completion zsh)
-```
-
----
-
-#### 🔹 Aliases
-Shorten commands without hiding flags:
-
-```bash
-alias k=kubectl
-alias kctx='kubectl config use-context'
-alias kns='kubectl config set-context --current --namespace'
-```
-
----
-
-#### 🔹 Output Formatting
-Practice JSONPath and custom columns:
-
-```bash
-# Wide output
-k get pods -o wide
-
-# Custom columns
-k get pods -o custom-columns=NAME:.metadata.name,NODE:.spec.nodeName
-
-# JSONPath
-k get pods -o jsonpath='{.items[*].metadata.name}'
-```
-
----
-
-#### 🔹 Context Management
-Switch clusters and namespaces quickly:
-
-```bash
-k config use-context <context-name>
-k config set-context --current --namespace=observability
-```
-
----
-
-#### 🔹 Monitoring Rollouts
-Use `watch` to track changes in real time:
-
-```bash
-watch -n1 kubectl get pods
-```
-
----
-
-#### 🔹 Built‑in Learning Aid
-Use `kubectl explain` to explore resource schemas:
-
-```bash
-k explain pod.spec.containers
-```
-
----
-
-#### 🚫 Tools to Avoid for CKA Prep
-- **K9s, Lens, GUIs** → Great in production, but they abstract away raw commands.
-- **Wrapper scripts** → Save time but don’t build exam‑critical muscle memory.
-
----
-
-#### 🧭 Teaching Note
-> Efficiency for CKA prep means **autocompletion, aliases, and output formatting** — not hiding `kubectl` behind GUIs. You want speed without losing command fluency.
-
----
-### References
-
-- [GoogleCloudPlatform/platform-engineering](https://github.com/GoogleCloudPlatform/platform-engineering)
-- [Prometheus](https://prometheus.io/)
-- [Grafana](https://grafana.com/)
-- [Terraform GCP Provider](https://registry.terraform.io/providers/hashicorp/google/latest)
-- TODO
-
----
-
-## 📦 Terraform Module: `project-iam-binding`
-
-**Module structure:**
-
-```
-modules/
-  project-iam-binding/
-    main.tf
-    variables.tf
-    outputs.tf
-```
-
----
-
-### `variables.tf`
-
-```hcl
-variable "project_id" {
-  description = "The GCP project ID where IAM bindings will be applied"
-  type        = string
-}
-
-variable "service_account_email" {
-  description = "Service account email to bind roles to"
-  type        = string
-}
-
-variable "roles" {
-  description = "List of IAM roles to bind to the service account"
-  type        = list(string)
-}
-```
-
----
-
-### `main.tf`
-
-```hcl
-resource "google_project_iam_binding" "bindings" {
-  for_each = toset(var.roles)
-
-  project = var.project_id
-  role    = each.value
-
-  members = [
-    "serviceAccount:${var.service_account_email}"
-  ]
-}
-```
-
----
-
-### `outputs.tf`
-
-```hcl
-output "bindings" {
-  description = "IAM bindings applied to the service account"
-  value       = google_project_iam_binding.bindings
-}
-```
-
----
-
-## 🔧 Example Usage
-
-In your root module:
-
-```hcl
-module "terraform_sa_bindings" {
-  source                = "./modules/project-iam-binding"
-  project_id            = "infra-observability-lab"
-  service_account_email = "terraform-sa@infra-observability-lab.iam.gserviceaccount.com"
-
-  roles = [
-    "roles/serviceusage.serviceUsageConsumer",
-    "roles/serviceusage.serviceUsageAdmin",
-    "roles/container.admin",
-    "roles/compute.viewer",
-    "roles/iam.workloadIdentityUser"
-  ]
-}
-```
-
----
-
-## 🧭 Teaching note
-> “This module abstracts IAM binding logic. You pass in the project ID, service account email, and a list of roles. Terraform loops through them and applies bindings consistently.”
-
-Absolutely, Dan — here’s a clear and concise `README.md` that documents the Prometheus discovery fix and the Terraform changes you made to support dynamic scraping of `demo-api` Pods by version:
-
----
-
-### Prometheus Pod Discovery Fix for `demo-api`
-
-#### ✅ Summary of Changes
-
-##### 1. **Prometheus Configuration**
-- Enabled dynamic Pod discovery via `kubernetes_sd_configs`:
-  ```yaml
-  scrape_configs:
-    - job_name: demo-api
-      kubernetes_sd_configs:
-        - role: pod
-      relabel_configs:
-        - source_labels: [__meta_kubernetes_pod_label_app]
-          action: keep
-          regex: demo-api
-        - source_labels: [__meta_kubernetes_pod_label_version]
-          target_label: version
-        - source_labels: [__meta_kubernetes_pod_container_port_name]
-          action: keep
-          regex: metrics
-  ```
-- Removed static scrape target `${PROMETHEUS_TARGET}` to rely fully on dynamic discovery.
-
----
-
-##### 2. **Terraform Deployment Updates**
-- Added `name = "metrics"` to the container port block in all `demo-api` Deployments:
-  ```hcl
-  port {
-    name           = "metrics"
-    container_port = var.container_port
-  }
-  ```
-- This ensures Prometheus matches the relabel rule filtering for ports named `metrics`.
-
----
-
-##### 3. **RBAC Fix**
-- Verified Prometheus uses the correct ServiceAccount (`prometheus-server`) via:
-  ```yaml
-  serviceAccountName: prometheus-server
-  ```
-- Created missing ServiceAccount in the `observability` namespace:
-  ```yaml
-  apiVersion: v1
-  kind: ServiceAccount
-  metadata:
-    name: prometheus-server
-    namespace: observability
-  ```
-- Confirmed ClusterRoleBinding ties `prometheus-server` ServiceAccount to the `prometheus-server` ClusterRole with `get/list/watch` permissions on Pods.
-
----
-
-#### 🔍 Verification Steps
-
-- Prometheus UI → *Status → Targets* now shows all `demo-api` Pods as `UP`, with correct `version` labels.
-- Grafana dashboards using:
-  ```promql
-  sum by (version) (process_resident_memory_bytes{job="demo-api"})
-  ```
-  now show distinct memory usage lines for blue/green/red.
-
----
-
-#### 🧭 Teaching Note
-
-> “Prometheus service discovery depends on Kubernetes metadata and RBAC. Port naming and relabeling must align, and the ServiceAccount must be authorized to list Pods.”
-
----

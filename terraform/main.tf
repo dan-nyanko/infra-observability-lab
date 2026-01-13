@@ -45,7 +45,7 @@ provider "kubernetes" {
 
 module "demo_api" {
   source = "./demo-api"
-  demo_api_image_blue  = "dannyanko/infra-demo-api:v4"
-  demo_api_image_green = "dannyanko/infra-demo-api:v4"
-  demo_api_image_red   = "dannyanko/infra-demo-api:v4"
+  demo_api_image_blue  = "dannyanko/infra-demo-api:v5"
+  demo_api_image_green = "dannyanko/infra-demo-api:v5"
+  demo_api_image_red   = "dannyanko/infra-demo-api:v5"
 }

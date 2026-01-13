@@ -9,7 +9,6 @@ SERVICE_URL = os.getenv(
 )
 BASE_INTERVAL = float(os.getenv("INTERVAL", "1.0"))  # seconds between requests
 JITTER = float(os.getenv("INTERVAL_JITTER", "0.5"))  # max +/- variation
-TRAFFIC_MODE = os.getenv("TRAFFIC_MODE", "good")  # "good", "error", or "crash"
 CRASH_INTERVAL = int(
     os.getenv("CRASH_INTERVAL", "30")
 )  # seconds between crash triggers
@@ -68,17 +67,16 @@ def crash_traffic():
 
 
 def main():
-    print(f"Starting traffic generator in mode: {TRAFFIC_MODE}")
     while True:
-        if TRAFFIC_MODE == "good":
+        # Weighted mix: mostly good, some error, occasional crash
+        choice = random.random()
+
+        if choice < 0.70:
             good_traffic()
-        elif TRAFFIC_MODE == "error":
+        elif choice < 0.95:
             error_traffic()
-        elif TRAFFIC_MODE == "crash":
-            crash_traffic()
         else:
-            print(f"Unknown TRAFFIC_MODE={TRAFFIC_MODE}, defaulting to good traffic")
-            good_traffic()
+            crash_traffic()
 
 
 if __name__ == "__main__":
