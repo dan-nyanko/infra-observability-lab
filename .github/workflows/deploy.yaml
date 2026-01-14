@@ -77,7 +77,10 @@ jobs:
           audience: https://github.com/
 
       - name: Terraform Init
-        run: terraform init
+        run: terraform init -reconfigure
+
+      - name: Debug backend
+        run: terraform providers
 
       - name: Terraform Plan
         run: |
