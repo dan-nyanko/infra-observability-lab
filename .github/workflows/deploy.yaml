@@ -5,6 +5,8 @@ on:
     branches: ["main"] # run pipeline when code is pushed to main
     paths:
       - "demo_api/**/*.py"
+  workflow_dispatch:
+
 jobs:
   test:
     runs-on: ubuntu-latest

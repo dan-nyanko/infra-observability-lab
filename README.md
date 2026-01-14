@@ -579,291 +579,140 @@ Here’s a complete **README section in Markdown** you can drop into your repo t
 
 ---
 
-### 🔵🟢🔴 Blue/Green/Red Deployment Demo
+### 🔵🟢🔴 Blue/Green/Red Deployment Demo (Terraform + GitHub Actions)
+This section demonstrates how the demo_api service is built, versioned, and deployed into Kubernetes using Terraform and GitHub Actions. Three parallel versions of the service — blue, green, and red — run side‑by‑side in the cluster.
+• Blue and green behave normally
+• Red intentionally introduces errors and latency for observability and incident‑response practice
 
-This section demonstrates how to build and publish the `demo-api` image, deploy three versions (`blue`, `green`, and `red`) into Kubernetes, and switch traffic between them. The **red** version is designed to simulate errors and latency for observability and incident response practice.
+All deployments are fully automated through CI/CD.
 
----
+#### 🐳 Container Image (Python/Flask)
+The demo_api service is a lightweight Python/Flask API. Its Dockerfile lives in the demo_api/ directory and is built automatically by GitHub Actions using Docker Buildx.
+You no longer need to build images manually — the workflow handles:
+• Multi‑arch builds (amd64 + arm64)
+• Tagging (v<run_number> + latest)
+• Pushing to Docker Hub
 
-#### 🐳 Dockerfile
+### 🚀 Automated CI/CD Pipeline
+The deploy.yaml GitHub Actions workflow performs the full build‑and‑deploy sequence whenever Python files inside demo_api/ change and are merged into main.
 
-The `demo-api` Dockerfile defines a simple containerized API service:
+1. Tests run
+The workflow installs dependencies and runs pytest.
+If tests fail, deployment stops.
 
-```dockerfile
-FROM node:18-alpine
+2. Multi‑arch Docker image is built and pushed
+Buildx produces a manifest list and pushes:
+• dannyanko/demo-api:v<run_number>
+• dannyanko/demo-api:latest
+Every deployment uses a unique, traceable version.
 
-WORKDIR /app
-COPY package*.json ./
-RUN npm install --production
-
-COPY . .
-EXPOSE 3000
-
-CMD ["npm", "start"]
-```
-
----
-
-#### 🛠️ Building for Multiple Platforms
-
-To ensure compatibility across both `amd64` and `arm64` nodes, use Docker Buildx:
-
-```bash
-docker buildx build --platform linux/amd64,linux/arm64 \
-  -t dannyanko/infra-demo-api:<version> . \
-  --push \
-  --provenance=false --sbom=false
-```
-
-- `--platform` ensures a multi‑arch manifest list is created.
-- `-t ...:<version>` tags the image with a reproducible version (`:v1`, `:v2`, etc.).
-- `--push` uploads directly to Docker Hub.
-
-Verify the manifest list:
-
-```bash
-docker buildx imagetools inspect dannyanko/infra-demo-api
-```
-
----
-
-#### 🚀 Deploying Blue, Green, and Red Versions
-
-Create three Deployment manifests:
-
-**`demo-api/blue.yaml`**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: demo-api-blue
-  namespace: observability
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: demo-api
-      version: blue
-  template:
-    metadata:
-      labels:
-        app: demo-api
-        version: blue
-        environment: development
-    spec:
-      containers:
-        - name: demo-api
-          image: dannyanko/infra-demo-api:v2
-          env:
-          - name: VERSION
-            value: "blue"
-          ports:
-          - containerPort: 5000
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "512Mi"
-            limits:
-              cpu: "400m"
-              memory: "1Gi"
-          imagePullPolicy: Always
-```
-
-**`demo-api/green.yaml`**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: demo-api-green
-  namespace: observability
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: demo-api
-      version: green
-  template:
-    metadata:
-      labels:
-        app: demo-api
-        version: green
-    spec:
-      containers:
-        - name: demo-api
-          image: dannyanko/infra-demo-api:v2
-          env:
-          - name: VERSION
-            value: "green"
-          ports:
-          - containerPort: 5000
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "512Mi"
-            limits:
-              cpu: "400m"
-              memory: "1Gi"
-          imagePullPolicy: Always
-```
-
-**`demo-api/red.yaml`**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: demo-api-red
-  namespace: observability
-spec:
-  replicas: 2
-  selector:
-    matchLabels:
-      app: demo-api
-      version: red
-  template:
-    metadata:
-      labels:
-        app: demo-api
-        version: red
-        environment: testing
-    spec:
-      containers:
-        - name: demo-api
-          image: dannyanko/infra-demo-api:v2
-          env:
-          - name: VERSION
-            value: "red"
-          ports:
-          - containerPort: 5000
-          resources:
-            requests:
-              cpu: "200m"
-              memory: "512Mi"
-            limits:
-              cpu: "400m"
-              memory: "1Gi"
-          imagePullPolicy: Always
-```
-
-Apply all three:
-
-```bash
-kubectl apply -f demo-api-blue.yaml -n observability
-kubectl apply -f demo-api-green.yaml -n observability
-kubectl apply -f demo-api-red.yaml -n observability
-```
-
----
-
-#### 🔀 Switching Traffic
-
-Define a Service that selects either `blue`, `green`, or `red` pods:
-
-**`demo-api-service.yaml`**
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: demo-api
-  namespace: observability
-spec:
-  selector:
-    app: demo-api
-    version: blue   # 👈 switch here between "blue", "green", or "red"
-  ports:
-    - port: 80
-      targetPort: 5000
-```
-
-Apply the Service:
-
-```bash
-kubectl apply -f demo-api-service.yaml -n observability
-```
-
----
-
-#### 🌐 Accessing via LoadBalancer Public IP
-
-Expose the `demo-api` Service as a LoadBalancer:
-
-```yaml
-apiVersion: v1
-kind: Service
-metadata:
-  name: demo-api
-  namespace: observability
-spec:
-  type: LoadBalancer
-  selector:
-    app: demo-api
-    version: blue   # switch between "blue", "green", or "red"
-  ports:
-    - port: 80
-      targetPort: 5000
-```
-
-Apply the Service:
-
-```bash
-kubectl apply -f demo-api-service.yaml -n observability
-```
-
----
-
-#### 🔍 Get the Public IP
-
-Run:
-
-If you have **not** applied Cloud Armor:
-
-```bash
-kubectl get svc demo-api -n observability
-```
-
-Example output:
+3. Terraform deploys the new version
+Terraform receives the new image tag via variables:
 
 ```
-NAME       TYPE           CLUSTER-IP     EXTERNAL-IP       PORT(S)        AGE
-demo-api   LoadBalancer   10.0.0.123     34.x.x.x          80:5000/TCP    2m
+terraform apply -auto-approve \
+  -var="demo_api_image_blue=dannyanko/demo-api:v123" \
+  -var="demo_api_image_green=dannyanko/demo-api:v123" \
+  -var="demo_api_image_red=dannyanko/demo-api:v123"
 ```
 
-If you have applied Cloud Armor:
+Terraform updates all three Kubernetes Deployments (blue, green, red) to use the new image.
 
-```bash
-kubectl get ingress demo-api-ingress -n observability
+4. GKE Autopilot performs rolling updates
+Kubernetes automatically:
+• Pulls the new image
+• Replaces old Pods
+• Ensures zero downtime
+
+No manual `kubectl` apply is required.
+
+#### 🧱 Terraform‑Managed Deployments
+
+Terraform owns the Kubernetes manifests for all three versions.
+Each Deployment is parameterized by the image version passed in from CI/CD.
+
+Example (simplified):
+
+```Hcl
+variable "demo_api_image_blue" {}
+variable "demo_api_image_green" {}
+variable "demo_api_image_red" {}
+
+resource "kubernetes_deployment" "demo_api_blue" {
+  metadata {
+    name      = "demo-api-blue"
+    namespace = "observability"
+    labels = {
+      app     = "demo-api"
+      version = "blue"
+    }
+  }
+
+  spec {
+    replicas = 2
+    selector {
+      match_labels = {
+        app     = "demo-api"
+        version = "blue"
+      }
+    }
+
+    template {
+      metadata {
+        labels = {
+          app     = "demo-api"
+          version = "blue"
+        }
+      }
+
+      spec {
+        container {
+          name  = "demo-api"
+          image = var.demo_api_image_blue
+          port {
+            container_port = 5000
+          }
+        }
+      }
+    }
+  }
+}
 ```
 
-Example output:
+Terraform generates equivalent resources for green and red.
 
-```
-NAME               CLASS    HOSTS   ADDRESS         PORTS   AGE
-demo-api-ingress   <none>   *       34.x.x.x       80      2d16h
-```
+#### 🔀 Switching Traffic Between Blue/Green/Red
+Traffic routing is controlled by a single Kubernetes Service, also managed by Terraform.
 
----
-
-#### 📡 Send Requests
-
-Once the external IP is available:
-
-```bash
-curl http://34.x.x.x/
+To switch traffic, update the selector:
+```Hcl
+selector = {
+  app     = "demo-api"
+  version = "blue"   # change to "green" or "red"
+}
 ```
 
-- When the Service selector points to `version: blue`, responses come from the blue deployment.
-- When switched to `version: green`, responses come from the green deployment.
-- When switched to `version: red`, responses come from the red deployment — including simulated error and latency routes for incident practice.
+Apply via CI/CD or run terraform apply manually if you’re experimenting locally.
 
----
+#### 🌐 Accessing the Service
+Terraform also manages the LoadBalancer Service or Ingress (depending on your configuration).
+
+Once applied, retrieve the external IP:
+```kubectl get svc demo-api -n observability```
+
+Then send requests:
+```curl http://<external-ip>/```
+
+If the Service selects version=blue, responses come from the blue Pods
+If it selects version=green, responses come from green
+If it selects version=red, you’ll see error/latency behavior for incident simulation
 
 #### 🎉 Key Takeaways
-- Use **versioned image tags** (`blue`, `green`, `red`) for reproducibility.
-- Deploy **multiple versions side‑by‑side**.
-- Switch traffic by updating the Service selector.
-- Validate with `curl` requests to confirm which version is serving traffic.
-- The **red version** provides a safe way to simulate incidents (errors, latency) for observability and response training.
-
-Here’s an updated version of those README sections that reflects the **final state** we reached together — using top‑level kustomization, per‑component `kustomization.yaml`, and the initContainer + `envsubst` pattern for Prometheus. I’ve rewritten the flow so learners see exactly how ConfigMaps, `secretGenerator`, and replacements are used in practice:
+• Terraform is the single source of truth for all Kubernetes resources
+• GitHub Actions builds and deploys new versions automatically
+• Blue/Green/Red run in parallel for safe testing and observability practice
+• Traffic switching is done by updating the Service selector in Terraform
+• Red provides controlled failure modes for hands‑on incident response training
 
 ---
 
