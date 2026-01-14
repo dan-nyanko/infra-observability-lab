@@ -29,3 +29,15 @@ variable "resource_labels" {
     managed-by  = "terraform"
   }
 }
+
+variable "demo_api_image_blue" {
+  type = string
+}
+
+variable "demo_api_image_green" {
+  type = string
+}
+
+variable "demo_api_image_red" {
+  type = string
+}
