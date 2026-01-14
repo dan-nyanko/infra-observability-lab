@@ -82,20 +82,27 @@ jobs:
           audience: https://github.com/
 
       - name: Write tfvars
-        working-directory: terraform
         run: |
+          echo "PWD: $(pwd)"
+          ls -la
           cat > terraform.tfvars <<'EOF'
           ${{ secrets.TFVARS }}
           EOF
+        working-directory: terraform
 
       - name: Terraform Init
+        run: |
+          echo "PWD: $(pwd)"
+          ls -la
+          terraform init
         working-directory: terraform
-        run: terraform init
 
       - name: Terraform Apply
-        working-directory: terraform
         run: |
+          echo "PWD: $(pwd)"
+          ls -la
           terraform apply -auto-approve -var-file=terraform.tfvars \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
+        working-directory: terraform
