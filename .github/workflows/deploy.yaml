@@ -59,6 +59,9 @@ jobs:
     defaults:
       run:
         working-directory: terraform
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+      PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
     steps:
       - uses: actions/checkout@v4
 
