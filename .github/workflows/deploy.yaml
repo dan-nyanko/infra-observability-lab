@@ -79,7 +79,8 @@ jobs:
         run: terraform init
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve \
-          -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
-          -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
-          -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
+        run: |
+          terraform apply -auto-approve \
+            -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+            -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+            -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
