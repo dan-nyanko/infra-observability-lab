@@ -55,10 +55,12 @@ jobs:
 
   deploy:
     needs: build-and-push
+
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: terraform
+
+    permissions:
+      id-token: write
+      contents: read
 
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -66,7 +68,8 @@ jobs:
       TF_LOG: INFO
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repo
+        uses: actions/checkout@v4
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@v3
@@ -78,10 +81,6 @@ jobs:
           service_account: terraform-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
           audience: https://github.com/
 
-      - name: Terraform Init
-        working-directory: terraform
-        run: terraform init -reconfigure
-
       - name: Write tfvars
         working-directory: terraform
         run: |
@@ -89,11 +88,14 @@ jobs:
           ${{ secrets.TFVARS }}
           EOF
 
+      - name: Terraform Init
+        working-directory: terraform
+        run: terraform init
+
       - name: Terraform Apply
         working-directory: terraform
         run: |
-          terraform apply -auto-approve \
-            -var-file=terraform.tfvars \
+          terraform apply -auto-approve -var-file=terraform.tfvars \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
