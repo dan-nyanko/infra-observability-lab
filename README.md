@@ -379,6 +379,16 @@ Authentication is handled via **Workload Identity Federation (WIF)**, which allo
 3. The provider allows impersonation of a **service account** (e.g. `terraform-sa@PROJECT_ID.iam.gserviceaccount.com`).
 4. Terraform uses that service account to access GCP resources securely.
 
+#### ⭐ Why Workload Identity Federation?
+
+Traditional CI pipelines authenticate to GCP using a downloaded JSON key stored in GitHub Secrets. That approach works, but it has drawbacks:
+
+- JSON keys never expire
+- Keys can be leaked or copied
+- Rotating keys is manual and error‑prone
+
+WIF solves all of this by letting GitHub exchange its OIDC token for a short‑lived Google Cloud access token, with no secrets stored in the repo.
+
 ---
 
 #### ✅ Steps to enable WIF on GCP
