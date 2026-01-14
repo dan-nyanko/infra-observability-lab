@@ -101,7 +101,7 @@ jobs:
         run: |
           echo "PWD: $(pwd)"
           ls -la
-          terraform apply -auto-approve -var-file=terraform.tfvars \
+          terraform -chdir=. apply -auto-approve -var-file=terraform.tfvars \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
