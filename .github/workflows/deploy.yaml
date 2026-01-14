@@ -79,9 +79,6 @@ jobs:
       - name: Terraform Init
         run: terraform init -reconfigure
 
-      - name: Debug backend
-        run: terraform providers
-
       - name: Terraform Plan
         run: |
           terraform plan \
