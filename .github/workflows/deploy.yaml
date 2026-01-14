@@ -41,6 +41,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push multi-arch image
+        working-directory: demo_api
         run: |
           IMAGE=dannyanko/demo-api
           TAG=v${{ github.run_number }}
@@ -62,6 +63,6 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve \
-          -var="demo_api_image_blue=dannyanko/demo-api:v${{ github.run_number }}" \
-          -var="demo_api_image_green=dannyanko/demo-api:v${{ github.run_number }}" \
-          -var="demo_api_image_red=dannyanko/demo-api:v${{ github.run_number }}"
+          -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+          -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+          -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
