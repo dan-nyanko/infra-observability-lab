@@ -62,6 +62,7 @@ jobs:
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
+      TF_LOG: INFO
     steps:
       - uses: actions/checkout@v4
 
@@ -77,6 +78,13 @@ jobs:
 
       - name: Terraform Init
         run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          terraform plan \
+            -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+            -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
+            -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
 
       - name: Terraform Apply
         run: |
