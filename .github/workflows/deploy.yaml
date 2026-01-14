@@ -7,6 +7,10 @@ on:
       - "demo_api/**/*.py"
   workflow_dispatch:
 
+permissions:
+  id-token: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -43,7 +47,7 @@ jobs:
       - name: Build and push multi-arch image
         working-directory: demo_api
         run: |
-          IMAGE=dannyanko/demo-api
+          IMAGE=dannyanko/infra-demo-api
           TAG=v${{ github.run_number }}
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t $IMAGE:$TAG -t $IMAGE:latest \
