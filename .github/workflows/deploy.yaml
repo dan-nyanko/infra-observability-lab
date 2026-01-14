@@ -59,10 +59,12 @@ jobs:
     defaults:
       run:
         working-directory: terraform
+
     env:
       PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
       PROJECT_NUMBER: ${{ secrets.GCP_PROJECT_NUMBER }}
       TF_LOG: INFO
+
     steps:
       - uses: actions/checkout@v4
 
@@ -80,18 +82,18 @@ jobs:
         working-directory: terraform
         run: terraform init -reconfigure
 
-      - name: Terraform Plan
+      - name: Write tfvars
         working-directory: terraform
         run: |
-          terraform plan \
-            -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
-            -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
-            -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
+          cat > terraform.tfvars <<'EOF'
+          ${{ secrets.TFVARS }}
+          EOF
 
       - name: Terraform Apply
         working-directory: terraform
         run: |
           terraform apply -auto-approve \
+            -var-file=terraform.tfvars \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
