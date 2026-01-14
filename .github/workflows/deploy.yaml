@@ -77,9 +77,11 @@ jobs:
           audience: https://github.com/
 
       - name: Terraform Init
+        working-directory: terraform
         run: terraform init -reconfigure
 
       - name: Terraform Plan
+        working-directory: terraform
         run: |
           terraform plan \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
@@ -87,6 +89,7 @@ jobs:
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
 
       - name: Terraform Apply
+        working-directory: terraform
         run: |
           terraform apply -auto-approve \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
