@@ -83,8 +83,6 @@ jobs:
 
       - name: Write tfvars
         run: |
-          echo "PWD: $(pwd)"
-          ls -la
           cat > terraform.tfvars <<'EOF'
           ${{ secrets.TFVARS }}
           EOF
@@ -92,16 +90,12 @@ jobs:
 
       - name: Terraform Init
         run: |
-          echo "PWD: $(pwd)"
-          ls -la
           terraform init
         working-directory: terraform
 
       - name: Terraform Apply
         run: |
-          echo "PWD: $(pwd)"
-          ls -la
-          terraform -chdir=. apply -auto-approve -var-file=terraform.tfvars \
+          terraform apply -auto-approve -var-file=terraform.tfvars \
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.run_number }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.run_number }}"
