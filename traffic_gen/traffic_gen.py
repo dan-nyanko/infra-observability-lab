@@ -10,11 +10,11 @@ logging.basicConfig(level=logging.INFO)
 SERVICE_URL = os.getenv(
     "SERVICE_URL", "http://demo-api.observability.svc.cluster.local"
 )
-BASE_INTERVAL = float(os.getenv("INTERVAL", "1.0"))  # seconds between requests
-JITTER = float(os.getenv("INTERVAL_JITTER", "0.5"))  # max +/- variation
+BASE_INTERVAL = float(os.getenv("INTERVAL", "0.1"))  # seconds between requests
+JITTER = float(os.getenv("INTERVAL_JITTER", "0.05"))  # max +/- variation
 CRASH_INTERVAL = int(os.getenv("CRASH_INTERVAL", "5"))  # seconds between crash triggers
-BURST_CHANCE = float(os.getenv("BURST_CHANCE", "0.1"))  # 10% chance to trigger a burst
-BURST_SIZE = int(os.getenv("BURST_SIZE", "5"))  # number of extra requests in a burst
+BURST_CHANCE = float(os.getenv("BURST_CHANCE", "0.5"))  # 50% chance to trigger a burst
+BURST_SIZE = int(os.getenv("BURST_SIZE", "10"))  # number of extra requests in a burst
 
 last_crash_time = 0
 
