@@ -33,6 +33,8 @@ jobs:
             --push .
 
   deploy:
+    needs: build-and-push
+
     runs-on: ubuntu-latest
 
     permissions:
@@ -71,5 +73,7 @@ jobs:
         working-directory: terraform
 
       - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve -var-file=terraform.tfvars \
+            -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.sha }}"
         working-directory: terraform
-        run: terraform apply -auto-approve -var-file=terraform.tfvars
