@@ -27,7 +27,7 @@ jobs:
         working-directory: demo_api
         run: |
           IMAGE=dannyanko/infra-traffic-gen
-          TAG=v${{ github.sha }}
+          TAG=${{ github.sha }}
           docker buildx build --platform linux/amd64,linux/arm64 \
             -t $IMAGE:$TAG -t $IMAGE:latest \
             --push .
