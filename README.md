@@ -1482,13 +1482,13 @@ kubectl exec -it curlpod -n observability -- curl -v http://demo-api.observabili
 
 ### Run Incident Simulation
 
-We deploy a `traffic-gen` pod that continuously hits the demo-api service. This generates synthetic traffic, and including errors and latency when the red serice it deployed. This will show realistic incident patterns.”
+Trigger the `demo-api-drills` GitHub workflow to simulate incidents. This workflow deploys the `traffic-gen` pod and switches the `demo-api` service to the red variant, generating synthetic traffic with errors and latency. Observe realistic incident patterns in Grafana and Prometheus.
 
 ---
 
 #### 🐍 Python Traffic Generator Script
 
-TODO write a summary of source code at `traffic-gen/traffic_gen.py`
+The `traffic_gen.py` script runs as a Kubernetes Deployment, sending weighted HTTP requests to the `demo-api` service. It randomly selects endpoints (`/`, `/error`, `/latency`), introduces jitter and bursts for realistic load, and exposes metrics for Prometheus scraping. This simulates user traffic, enabling learners to observe error rates, latency spikes, and pod behavior during incidents.
 
 ---
 
@@ -1547,7 +1547,7 @@ Demo‑API running clean (blue variant). Request rate and latency are stable. No
 
 #### Switch Service to Red
 
-TODO
+Launch the `demo-api-drills` workflow in "incident" mode via GitHub Actions UI (Actions > Demo API Drills > Run workflow). This deploys the red `demo-api` variant with 1 replica, triggering error responses and crashes. Rollback to normal by running "rollback" mode.
 
 ---
 
@@ -1573,7 +1573,7 @@ Once you've switched the `demo-api` service to the `red` variant, observe how th
 | Variant          | `red`                                            |
 | Start Time       | `YYYY-MM-DD HH:MM` (local or UTC)                |
 | End Time         | `YYYY-MM-DD HH:MM` (when system returned to green) |
-| Trigger Method   | Manual switch via `kubectl apply`                |
+| Trigger Method   | GitHub workflow `demo-api-drills` in "incident" mode |
 | Traffic Source   | `traffic-gen` pod                                |
 
 ---
