@@ -48,11 +48,21 @@ module "demo_api" {
   demo_api_image_blue  = var.demo_api_image_blue
   demo_api_image_green = var.demo_api_image_green
   demo_api_image_red   = var.demo_api_image_red
-  replicas_red = var.replicas_red
+  replicas_red         = var.replicas_red
 }
 
 module "traffic_gen" {
-  source   = "./traffic-gen"
+  source               = "./traffic-gen"
   traffic_gen_image    = var.traffic_gen_image
   replicas_traffic_gen = var.replicas_traffic_gen
+}
+
+import {
+  to = module.demo_api.kubernetes_service_v1.demo_api_shared
+  id = "observability/demo-api"
+}
+
+import {
+  to = module.demo_api.kubernetes_service_v1.demo_api_red
+  id = "observability/demo-api-red"
 }

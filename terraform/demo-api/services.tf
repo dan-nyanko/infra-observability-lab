@@ -51,13 +51,3 @@ resource "kubernetes_service_v1" "demo_api_red" {
     type = var.service_type
   }
 }
-
-import {
-  to = kubernetes_service_v1.demo_api_shared
-  id = "observability/demo-api"
-}
-
-import {
-  to = kubernetes_service_v1.demo_api_red
-  id = "observability/demo-api-red"
-}
