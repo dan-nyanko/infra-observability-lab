@@ -21,7 +21,7 @@ resource "kubernetes_deployment_v1" "traffic_gen" {
       }
 
       spec {
-        containers {
+        container {
           name  = "traffic-gen"
           image = var.image
 
