@@ -38,6 +38,7 @@ jobs:
           audience: https://github.com/
 
       - name: Write tfvars
+        working-directory: terraform
         run: |
           cat > terraform.tfvars <<'EOF'
           ${{ secrets.TFVARS }}
@@ -47,9 +48,11 @@ jobs:
         uses: hashicorp/setup-terraform@v3
 
       - name: Terraform Init
+        working-directory: terraform
         run: terraform init
 
       - name: Terraform Apply
+        working-directory: terraform
         run: |
           if [ "${{ github.event.inputs.mode }}" = "incident" ]; then
             terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1"
