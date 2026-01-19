@@ -36,7 +36,6 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     issuer_uri = "https://token.actions.githubusercontent.com"
     allowed_audiences = [
       "https://github.com/",
-      "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
     ]
   }
 
@@ -56,5 +55,14 @@ resource "google_service_account_iam_binding" "terraform_sa_binding" {
 
   members = [
     "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/dan-nyanko/infra-observability-lab",
+  ]
+}
+
+# GCS bucket IAM binding for Terraform SA
+resource "google_storage_bucket_iam_binding" "terraform_sa_bucket_admin" {
+  bucket = "infra-observability-tfstate"
+  role   = "roles/storage.admin"
+  members = [
+    "serviceAccount:terraform-sa@${var.project_id}.iam.gserviceaccount.com",
   ]
 }
