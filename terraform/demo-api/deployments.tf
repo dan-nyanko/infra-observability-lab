@@ -22,8 +22,8 @@ resource "kubernetes_deployment_v1" "demo_api_blue" {
     template {
       metadata {
         labels = {
-          app     = "demo-api"
-          version = "blue"
+          app         = "demo-api"
+          version     = "blue"
           environment = "development"
         }
       }
@@ -74,6 +74,12 @@ resource "kubernetes_deployment_v1" "demo_api_blue" {
       }
     }
   }
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "10m"
+  }
 }
 
 # Green Deployment
@@ -82,8 +88,8 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
     name      = "demo-api-green"
     namespace = var.namespace
     labels = {
-      app     = "demo-api"
-      version = "green"
+      app         = "demo-api"
+      version     = "green"
       environment = "development"
     }
   }
@@ -101,8 +107,8 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
     template {
       metadata {
         labels = {
-          app     = "demo-api"
-          version = "green"
+          app         = "demo-api"
+          version     = "green"
           environment = "development"
         }
       }
@@ -153,6 +159,12 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
       }
     }
   }
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "10m"
+  }
 }
 
 # Red Deployment (drill)
@@ -179,8 +191,8 @@ resource "kubernetes_deployment_v1" "demo_api_red" {
     template {
       metadata {
         labels = {
-          app     = "demo-api"
-          version = "red"
+          app         = "demo-api"
+          version     = "red"
           environment = "development"
         }
       }
@@ -230,5 +242,11 @@ resource "kubernetes_deployment_v1" "demo_api_red" {
         }
       }
     }
+  }
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "10m"
   }
 }
