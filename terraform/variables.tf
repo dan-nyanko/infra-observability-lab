@@ -49,3 +49,13 @@ variable "replicas_red" {
   type    = number
   default = 0
 }
+
+variable "traffic_gen_image" {
+  type    = string
+  default = "dannyanko/traffic-gen:v2"
+}
+
+variable "traffic_gen_replicas" {
+  type    = number
+  default = 1
+}

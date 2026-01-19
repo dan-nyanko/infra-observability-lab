@@ -36,16 +36,22 @@ resource "google_container_cluster" "autopilot" {
 }
 
 provider "kubernetes" {
-  host                   = "https://${google_container_cluster.autopilot.endpoint}"
-  token                  = data.google_client_config.default.access_token
+  host  = "https://${google_container_cluster.autopilot.endpoint}"
+  token = data.google_client_config.default.access_token
   cluster_ca_certificate = base64decode(
     google_container_cluster.autopilot.master_auth[0].cluster_ca_certificate
   )
 }
 
 module "demo_api" {
-  source = "./demo-api"
+  source               = "./demo-api"
   demo_api_image_blue  = var.demo_api_image_blue
   demo_api_image_green = var.demo_api_image_green
   demo_api_image_red   = var.demo_api_image_red
+}
+
+module "traffic_gen" {
+  source   = "./traffic-gen"
+  image    = var.traffic_gen_image
+  replicas = var.traffic_gen_replicas
 }
