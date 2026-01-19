@@ -10,7 +10,8 @@ resource "kubernetes_deployment_v1" "demo_api_blue" {
   }
 
   spec {
-    replicas = var.replicas_blue
+    replicas                  = var.replicas_blue
+    progress_deadline_seconds = 1200
 
     selector {
       match_labels = {
@@ -95,7 +96,8 @@ resource "kubernetes_deployment_v1" "demo_api_green" {
   }
 
   spec {
-    replicas = var.replicas_green
+    replicas                  = var.replicas_green
+    progress_deadline_seconds = 1200
 
     selector {
       match_labels = {
@@ -179,7 +181,8 @@ resource "kubernetes_deployment_v1" "demo_api_red" {
   }
 
   spec {
-    replicas = var.replicas_red
+    replicas                  = var.replicas_red
+    progress_deadline_seconds = 1200
 
     selector {
       match_labels = {
