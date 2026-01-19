@@ -24,7 +24,7 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Build and push multi-arch image
-        working-directory: demo_api
+        working-directory: traffic_gen
         run: |
           IMAGE=dannyanko/infra-traffic-gen
           TAG=${{ github.sha }}
