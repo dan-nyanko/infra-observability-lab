@@ -12,7 +12,7 @@ resource "google_project_service" "iam" {
 # Workload Identity Pool
 resource "google_iam_workload_identity_pool" "github_pool" {
   project                   = var.project_number
-  workload_identity_pool_id = "github-pool"
+  workload_identity_pool_id = "github-actions-pool"
   display_name              = "GitHub Actions Pool"
   description               = "OIDC pool for GitHub Actions"
 }
@@ -20,7 +20,7 @@ resource "google_iam_workload_identity_pool" "github_pool" {
 # Workload Identity Provider (GitHub OIDC)
 resource "google_iam_workload_identity_pool_provider" "github_provider" {
   project                            = var.project_number
-  workload_identity_pool_id          = "github-pool"
+  workload_identity_pool_id          = "github-actions-pool"
   workload_identity_pool_provider_id = "github-provider"
   display_name                       = "GitHub Provider"
   description                        = "Trust GitHub OIDC tokens"
@@ -32,6 +32,14 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     "attribute.repository_owner" = "assertion.repository_owner"
     "google.subject"             = "assertion.sub"
   }
+  oidc {
+    allowed_audiences = [
+      "https://github.com/",
+      "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
+    ]
+    issuer_uri = "https://token.actions.githubusercontent.com"
+  }
+}
   oidc {
     allowed_audiences = [
       "https://github.com/",
@@ -53,7 +61,7 @@ resource "google_service_account_iam_binding" "terraform_sa_binding" {
   service_account_id = google_service_account.terraform_sa.name
   role               = "roles/iam.workloadIdentityUser"
 
-  members = [
-    "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-pool/attribute.repository/dan-nyanko/infra-observability-lab",
-  ]
+      members = [
+        "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/attribute.repository/dan-nyanko/infra-observability-lab",
+      ]
 }
