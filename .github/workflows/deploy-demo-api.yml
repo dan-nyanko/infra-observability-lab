@@ -100,3 +100,4 @@ jobs:
             -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.sha }}" \
             -var="demo_api_image_green=dannyanko/infra-demo-api:v${{ github.sha }}" \
             -var="demo_api_image_red=dannyanko/infra-demo-api:v${{ github.sha }}"
+        working-directory: terraform
