@@ -39,18 +39,6 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     ]
     issuer_uri = "https://token.actions.githubusercontent.com"
   }
-
-  # Map claims from GitHub’s OIDC token
-  attribute_mapping = {
-    "google.subject"             = "assertion.sub"
-    "attribute.repository"       = "assertion.repository"
-    "attribute.ref"              = "assertion.ref"
-    "attribute.actor"            = "assertion.actor"
-    "attribute.repository_owner" = "assertion.repository_owner"
-  }
-
-  # 👇 Explicit condition referencing mapped claims
-  attribute_condition = "attribute.repository == 'dan-nyanko/infra-observability-lab' && attribute.ref == 'refs/heads/main'"
 }
 
 # Service Account for Terraform
@@ -65,7 +53,7 @@ resource "google_service_account_iam_binding" "terraform_sa_binding" {
   service_account_id = google_service_account.terraform_sa.name
   role               = "roles/iam.workloadIdentityUser"
 
-      members = [
-        "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-pool/attribute.repository/dan-nyanko/infra-observability-lab",
-      ]
+  members = [
+    "principalSet://iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-pool/attribute.repository/dan-nyanko/infra-observability-lab",
+  ]
 }
