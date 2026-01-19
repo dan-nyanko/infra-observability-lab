@@ -52,7 +52,7 @@ jobs:
         working-directory: terraform
         run: |
           if [ "${{ github.event.inputs.mode }}" = "incident" ]; then
-            terraform apply -auto-approve -var-file=terraform.tfvars -var="module.demo_api.replicas_red=1"
+            terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1"
           else
             terraform apply -auto-approve -var-file=terraform.tfvars
           fi

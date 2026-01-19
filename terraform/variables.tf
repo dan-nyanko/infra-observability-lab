@@ -44,3 +44,8 @@ variable "demo_api_image_red" {
   type    = string
   default = "dannyanko/infra-demo-api:latest"
 }
+
+variable "replicas_red" {
+  type    = number
+  default = 0
+}
