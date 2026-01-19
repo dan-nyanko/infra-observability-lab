@@ -35,6 +35,7 @@ jobs:
         with:
           workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-pool/providers/github-provider
           service_account: terraform-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+          audience: https://github.com/
 
       - name: Write tfvars
         run: |
