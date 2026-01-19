@@ -33,6 +33,12 @@ resource "google_container_cluster" "autopilot" {
   subnetwork = "default"
 
   resource_labels = var.resource_labels
+
+  timeouts {
+    create = "20m"
+    update = "20m"
+    delete = "10m"
+  }
 }
 
 provider "kubernetes" {
