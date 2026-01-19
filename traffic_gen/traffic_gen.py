@@ -1,8 +1,11 @@
+import logging
 import os
 import random
 import time
 
 import requests
+
+logging.basicConfig(level=logging.INFO)
 
 SERVICE_URL = os.getenv(
     "SERVICE_URL", "http://demo-api.observability.svc.cluster.local"
@@ -29,15 +32,15 @@ def send_request(route, label):
     url = f"{SERVICE_URL}{route}"
     try:
         resp = requests.get(url, timeout=5)
-        print(f"[{label}] Hit {url} -> {resp.status_code}")
+        logging.info(f"[{label}] Hit {url} -> {resp.status_code}")
     except Exception as e:
-        print(f"[{label}] Request failed: {e}")
+        logging.error(f"[{label}] Request failed: {e}")
     sleep_with_jitter()
 
 
 def maybe_burst(route, label):
     if random.random() < BURST_CHANCE:
-        print(f"[BURST] Triggering {BURST_SIZE} extra {label} requests")
+        logging.info(f"[BURST] Triggering {BURST_SIZE} extra {label} requests")
         for _ in range(BURST_SIZE):
             send_request(route, f"{label}-BURST")
 
@@ -67,9 +70,11 @@ def crash_traffic():
 
 
 def main():
+    logging.info("Traffic generator starting")
     while True:
         # Weighted mix: mostly good, some error, occasional crash
         choice = random.random()
+        logging.debug(f"Choice: {choice}")
 
         if choice < 0.70:
             good_traffic()
