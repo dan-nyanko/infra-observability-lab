@@ -9,6 +9,7 @@ from prometheus_client import (
     CollectorRegistry,
     Counter,
     Histogram,
+    ProcessCollector,
     generate_latest,
     multiprocess,
 )
@@ -21,6 +22,9 @@ def create_app():
     # If using multiprocess mode (Gunicorn), load metrics correctly
     if "prometheus_multiproc_dir" in os.environ:
         multiprocess.MultiProcessCollector(registry)
+    else:
+        # Add process metrics for single-process mode
+        ProcessCollector(registry=registry)
 
     app = Flask(__name__)
 
