@@ -403,7 +403,7 @@ WIF solves all of this by letting GitHub exchange its OIDC token for a short‑l
 
 2. **Create a Workload Identity Pool**
    ```bash
-   gcloud iam workload-identity-pools create github-pool \
+   gcloud iam workload-identity-pools create github-actions-pool \
      --project=$PROJECT_ID \
      --location=global \
      --display-name="GitHub Pool"
@@ -414,7 +414,7 @@ WIF solves all of this by letting GitHub exchange its OIDC token for a short‑l
    gcloud iam workload-identity-pools providers create-oidc github-provider \
      --project=$PROJECT_ID \
      --location=global \
-     --workload-identity-pool=github-pool \
+     --workload-identity-pool=github-actions-pool \
      --display-name="GitHub Provider" \
      --issuer-uri="https://token.actions.githubusercontent.com" \
      --attribute-condition="attribute.repository=='YOUR_ORG/YOUR_REPO' && attribute.ref=='refs/heads/main'" \
@@ -449,7 +449,7 @@ WIF solves all of this by letting GitHub exchange its OIDC token for a short‑l
    - name: Authenticate to Google Cloud
      uses: google-github-actions/auth@v2
      with:
-       workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+       workload_identity_provider: projects/PROJECT_NUMBER/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider
        service_account: terraform-sa@PROJECT_ID.iam.gserviceaccount.com
        audience: https://github.com/
    ```
