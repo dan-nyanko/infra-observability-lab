@@ -31,13 +31,16 @@ variable "resource_labels" {
 }
 
 variable "demo_api_image_blue" {
-  type = string
+  type    = string
+  default = "dannyanko/infra-demo-api:latest"
 }
 
 variable "demo_api_image_green" {
-  type = string
+  type    = string
+  default = "dannyanko/infra-demo-api:latest"
 }
 
 variable "demo_api_image_red" {
-  type = string
+  type    = string
+  default = "dannyanko/infra-demo-api:latest"
 }
