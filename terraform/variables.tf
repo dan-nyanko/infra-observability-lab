@@ -50,6 +50,11 @@ variable "replicas_red" {
   default = 0
 }
 
+variable "replicas_traffic_gen" {
+  type    = number
+  default = 1
+}
+
 variable "traffic_gen_image" {
   type    = string
   default = "dannyanko/infra-traffic-gen:latest"

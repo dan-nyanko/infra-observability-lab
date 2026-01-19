@@ -5,7 +5,7 @@ resource "kubernetes_deployment_v1" "traffic_gen" {
   }
 
   spec {
-    replicas = var.replicas
+    replicas = var.replicas_traffic_gen
 
     selector {
       match_labels = {
@@ -23,7 +23,7 @@ resource "kubernetes_deployment_v1" "traffic_gen" {
       spec {
         container {
           name  = "traffic-gen"
-          image = var.image
+          image = var.traffic_gen_image
 
           env {
             name  = "SERVICE_URL"

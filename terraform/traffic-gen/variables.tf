@@ -3,12 +3,12 @@ variable "namespace" {
   default = "observability"
 }
 
-variable "image" {
+variable "traffic_gen_image" {
   type = string
   default = "dannyanko/infra-traffic-gen:latest"
 }
 
-variable "replicas" {
+variable "replicas_traffic_gen" {
   type    = number
   default = 1
 }

@@ -58,11 +58,7 @@ jobs:
         working-directory: terraform
         run: |
           if [ "${{ github.event.inputs.mode }}" = "incident" ]; then
-            terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1"
+            terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1"  -var="replicas_traffic_gen"=5
           else
             terraform apply -auto-approve -var-file=terraform.tfvars
           fi
-
-      - name: Scale red deployment
-        if: github.event.inputs.mode == 'incident'
-        run: kubectl scale deployment demo-api-red --replicas=1 -n observability

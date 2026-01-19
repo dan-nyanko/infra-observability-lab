@@ -75,5 +75,5 @@ jobs:
       - name: Terraform Apply
         run: |
           terraform apply -auto-approve -var-file=terraform.tfvars \
-            -var="demo_api_image_blue=dannyanko/infra-demo-api:v${{ github.sha }}"
+            -var="traffic_gen_image=dannyanko/infra-traffic-gen:v${{ github.sha }}"
         working-directory: terraform
