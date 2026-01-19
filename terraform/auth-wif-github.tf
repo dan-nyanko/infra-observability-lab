@@ -38,13 +38,7 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
   ]
 }
-  oidc {
-    allowed_audiences = [
-      "https://github.com/",
-      "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-pool/providers/github-provider"
-    ]
-    issuer_uri = "https://token.actions.githubusercontent.com"
-  }
+
 }
 
 # Service Account for Terraform
