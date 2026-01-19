@@ -32,11 +32,13 @@ resource "google_iam_workload_identity_pool_provider" "github_provider" {
     "attribute.repository_owner" = "assertion.repository_owner"
     "google.subject"             = "assertion.sub"
   }
-  issuer_uri = "https://token.actions.githubusercontent.com"
-  allowed_audiences = [
-    "https://github.com/",
-    "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
-  ]
+  oidc {
+    issuer_uri = "https://token.actions.githubusercontent.com"
+    allowed_audiences = [
+      "https://github.com/",
+      "//iam.googleapis.com/projects/${var.project_number}/locations/global/workloadIdentityPools/github-actions-pool/providers/github-provider",
+    ]
+  }
 
 }
 
