@@ -12,9 +12,7 @@ SERVICE_URL = os.getenv(
 )
 BASE_INTERVAL = float(os.getenv("INTERVAL", "1.0"))  # seconds between requests
 JITTER = float(os.getenv("INTERVAL_JITTER", "0.5"))  # max +/- variation
-CRASH_INTERVAL = int(
-    os.getenv("CRASH_INTERVAL", "30")
-)  # seconds between crash triggers
+CRASH_INTERVAL = int(os.getenv("CRASH_INTERVAL", "5"))  # seconds between crash triggers
 BURST_CHANCE = float(os.getenv("BURST_CHANCE", "0.1"))  # 10% chance to trigger a burst
 BURST_SIZE = int(os.getenv("BURST_SIZE", "5"))  # number of extra requests in a burst
 
@@ -72,13 +70,13 @@ def crash_traffic():
 def main():
     logging.info("Traffic generator starting")
     while True:
-        # Weighted mix: mostly good, some error, occasional crash
+        # Weighted mix: more error and crash for incident simulation
         choice = random.random()
-        logging.debug(f"Choice: {choice}")
+        logging.info(f"Choice: {choice:.2f}")
 
-        if choice < 0.70:
+        if choice < 0.50:
             good_traffic()
-        elif choice < 0.95:
+        elif choice < 0.90:
             error_traffic()
         else:
             crash_traffic()
