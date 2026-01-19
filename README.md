@@ -1528,7 +1528,7 @@ spec:
     spec:
       containers:
       - name: traffic-gen
-        image: dannyanko/traffic-gen:v2
+        image: dannyanko/infra-traffic-gen:latest
         env:
         - name: SERVICE_URL
           value: "http://demo-api.observability.svc.cluster.local"

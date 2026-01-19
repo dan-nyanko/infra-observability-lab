@@ -52,7 +52,7 @@ variable "replicas_red" {
 
 variable "traffic_gen_image" {
   type    = string
-  default = "dannyanko/traffic-gen:v2"
+  default = "dannyanko/infra-traffic-gen:latest"
 }
 
 variable "traffic_gen_replicas" {

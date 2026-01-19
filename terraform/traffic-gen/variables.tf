@@ -5,6 +5,7 @@ variable "namespace" {
 
 variable "image" {
   type = string
+  default = "dannyanko/infra-traffic-gen:latest"
 }
 
 variable "replicas" {
