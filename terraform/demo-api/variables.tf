@@ -22,12 +22,12 @@ variable "demo_api_image_red" {
 
 variable "replicas_blue" {
   type    = number
-  default = 3
+  default = 1
 }
 
 variable "replicas_green" {
   type    = number
-  default = 3
+  default = 1
 }
 
 variable "replicas_red" {
@@ -66,11 +66,11 @@ variable "service_type" {
 }
 
 variable "service_port" {
-  type        = number
-  default     = 80
+  type    = number
+  default = 80
 }
 
 variable "container_port" {
-  type        = number
-  default     = 5000
+  type    = number
+  default = 5000
 }
