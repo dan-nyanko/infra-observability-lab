@@ -34,6 +34,12 @@ jobs:
           service_account: terraform-sa@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
           audience: https://github.com/
 
+      - name: Get GKE credentials
+        uses: google-github-actions/get-gke-credentials@v1
+        with:
+          cluster_name: observability-lab
+          location: us-central1
+
       - name: Write tfvars
         working-directory: terraform
         run: |
@@ -56,3 +62,7 @@ jobs:
           else
             terraform apply -auto-approve -var-file=terraform.tfvars
           fi
+
+      - name: Scale red deployment
+        if: github.event.inputs.mode == 'incident'
+        run: kubectl scale deployment demo-api-red --replicas=1 -n observability
