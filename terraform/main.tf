@@ -56,13 +56,3 @@ module "traffic_gen" {
   traffic_gen_image    = var.traffic_gen_image
   replicas_traffic_gen = var.replicas_traffic_gen
 }
-
-import {
-  to = module.demo_api.kubernetes_service_v1.demo_api_shared
-  id = "observability/demo-api"
-}
-
-import {
-  to = module.demo_api.kubernetes_service_v1.demo_api_red
-  id = "observability/demo-api-red"
-}
