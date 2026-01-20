@@ -58,7 +58,7 @@ jobs:
         working-directory: terraform
         run: |
           if [ "${{ github.event.inputs.mode }}" = "incident" ]; then
-            terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1"  -var="replicas_traffic_gen"=5
+            terraform apply -auto-approve -var-file=terraform.tfvars -var="replicas_red=1" -var="replicas_traffic_gen=5" -var="traffic_gen_image=dannyanko/infra-traffic-gen:${{ github.sha }}"
           else
             terraform apply -auto-approve -var-file=terraform.tfvars
           fi

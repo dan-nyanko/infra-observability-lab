@@ -22,8 +22,9 @@ resource "kubernetes_deployment_v1" "traffic_gen" {
 
       spec {
         container {
-          name  = "traffic-gen"
+          name = "traffic-gen"
           image = var.traffic_gen_image
+          image_pull_policy = "Always"
 
           env {
             name  = "SERVICE_URL"
