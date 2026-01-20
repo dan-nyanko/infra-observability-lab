@@ -1,6 +1,7 @@
 resources:
   - prometheus/
   - grafana/
+  - kube-state-metrics/
 
 namespace: observability
 

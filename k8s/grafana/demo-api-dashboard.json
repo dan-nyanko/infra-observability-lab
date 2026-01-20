@@ -67,10 +67,13 @@
         "uid": "prometheus"
       },
       "id": 5,
+      "legend": {
+        "hideZero": true
+      },
       "targets": [
         {
-          "expr": "increase(kube_pod_container_status_restarts_total[5m])",
-          "legendFormat": "{{pod}}"
+          "expr": "label_replace(increase(kube_pod_container_status_restarts_total{pod=~\"demo-api-.*\"}[5m]) unless increase(kube_pod_container_status_restarts_total{pod=~\"demo-api-.*\"}[5m]) == 0, \"version\", \"$1\", \"pod\", \"demo-api-(blue|green|red)-.*\")",
+          "legendFormat": "{{version}}"
         }
       ],
       "title": "Pod Restarts",

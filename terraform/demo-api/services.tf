@@ -1,4 +1,4 @@
-# Shared Service for blue+green
+# Shared Service for blue+green+red (for normal traffic)
 resource "kubernetes_service_v1" "demo_api_shared" {
   metadata {
     name      = "demo-api"
@@ -13,8 +13,7 @@ resource "kubernetes_service_v1" "demo_api_shared" {
   spec {
     selector = {
       app = "demo-api"
-      # Note: selector intentionally broad to include blue+green.
-      # If you want to exclude red, ensure red uses its own Service only.
+      # Include all versions for load balancing
     }
 
     port {

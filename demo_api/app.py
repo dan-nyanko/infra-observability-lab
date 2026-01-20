@@ -1,6 +1,7 @@
 # Force rebuild for image tag fix
 import os
 import random
+import signal
 import sys
 import time
 
@@ -32,6 +33,9 @@ def create_app():
     # Read VERSION at app creation time, not import time
     version = os.getenv("VERSION", "blue")
     latency_threshold = 1.0
+
+    # Global flag to simulate pod crash via health check failure
+    global_crashed = {"crashed": False}
 
     # Define metrics inside the factory so they bind to this registry
     http_requests_total = Counter(
@@ -81,7 +85,8 @@ def create_app():
     @app.route("/crash")
     def crash():
         if version == "red":
-            sys.exit(1)
+            global_crashed["crashed"] = True
+            return "Crashed!", 500
         return f"No crash this time {version}", 200
 
     @app.route("/metrics")
@@ -90,10 +95,14 @@ def create_app():
 
     @app.route("/healthz")
     def healthz():
+        if global_crashed["crashed"]:
+            return "Crashed", 500
         return "OK", 200
 
     @app.route("/readyz")
     def readyz():
+        if global_crashed["crashed"]:
+            return "Not Ready", 500
         return "Ready", 200
 
     return app
