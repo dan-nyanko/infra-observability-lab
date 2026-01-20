@@ -1,6 +1,10 @@
 ---
 name: Deploy Demo API
 
+concurrency:
+  group: terraform
+  cancel-in-progress: true
+
 on:
   push:
     branches: ["main"] # run pipeline when code is pushed to main

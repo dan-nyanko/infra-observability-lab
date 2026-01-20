@@ -1,5 +1,9 @@
 name: Deploy Traffic Gen
 
+concurrency:
+  group: terraform
+  cancel-in-progress: true
+
 on:
   push:
     branches: ["main"]

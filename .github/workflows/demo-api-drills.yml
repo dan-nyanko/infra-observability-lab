@@ -1,5 +1,9 @@
 name: Demo API Drills
 
+concurrency:
+  group: terraform
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
     inputs:
