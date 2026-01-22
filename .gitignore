@@ -15,3 +15,7 @@
 
 # Sensitive vars
 secret.env
+
+# Opencode
+opencode.*
+.opencode/
